@@ -1,0 +1,182 @@
+{
+  "comentario": "CONFIGURACIÓN DE AUTOMATIZACIÓN DE NUTRIENTES - Modificar aquí sin tocar el código",
+  
+  "limites_seguridad": {
+    "maxAgregarPorDosis": 200,
+    "comentario_maxAgregar": "Máximo ppm a agregar en una sola aplicación. Si es más, el sistema recomendará dividir en múltiples dosis",
+    
+    "maxCambioWaterEnUnoDosis": 50,
+    "comentario_cambioWater": "Máximo porcentaje de agua a cambiar en una sola vez. Si es más, dividir en múltiples cambios",
+    
+    "tiempoEsperaEntreMacroelementos": 10,
+    "comentario_espera": "Minutos a esperar entre agregar cada macronutriente (N-P-K-Ca-Mg-S)",
+    
+    "tiempoEsperaEntreDosis": 60,
+    "comentario_tiempoEntreDosis": "Minutos a esperar entre aplicaciones de nutrientes (si necesita múltiples dosis)"
+  },
+
+  "etapas_cultivo": {
+    "plantula": {
+      "nombre": "🌱 Semilla/Plántula",
+      "dias": "0-20",
+      "ppm_min": 0,
+      "ppm_max": 400,
+      "ec_min": 0.5,
+      "ec_max": 1.5,
+      "recomendacion": "Sin nutrientes o dosis muy bajas. Enfoque en crecimiento de raíces"
+    },
+    "vegetativa": {
+      "nombre": "🌿 Vegetativa",
+      "dias": "21-40",
+      "ppm_min": 400,
+      "ppm_max": 800,
+      "ec_min": 1.2,
+      "ec_max": 2.2,
+      "recomendacion": "Alto en nitrógeno para crecimiento de tallos y hojas"
+    },
+    "floracion": {
+      "nombre": "🌸 Floración",
+      "dias": "41-70",
+      "ppm_min": 800,
+      "ppm_max": 1100,
+      "ec_min": 2.0,
+      "ec_max": 2.8,
+      "recomendacion": "Balance N-P-K. Aumentar fósforo y potasio"
+    },
+    "produccion": {
+      "nombre": "🍅 Producción",
+      "dias": "71-120",
+      "ppm_min": 1000,
+      "ppm_max": 1200,
+      "ec_min": 2.5,
+      "ec_max": 3.0,
+      "recomendacion": "Máximo nutrientes para desarrollo de frutos"
+    }
+  },
+
+  "ratios_macroelementos": {
+    "comentario": "Proporciones ideales de cada nutriente respecto a 600 ppm base",
+    "nitrogeno_N": {
+      "ratio": 150,
+      "fuente": "Nitrato de Potasio (KNO3) o Nitrato de Calcio (Ca(NO3)2)"
+    },
+    "fosforo_P": {
+      "ratio": 40,
+      "fuente": "Fosfato Monopotásico (KH2PO4)"
+    },
+    "potasio_K": {
+      "ratio": 200,
+      "fuente": "Nitrato de Potasio (KNO3)"
+    },
+    "calcio_Ca": {
+      "ratio": 80,
+      "fuente": "Nitrato de Calcio (Ca(NO3)2)"
+    },
+    "magnesio_Mg": {
+      "ratio": 30,
+      "fuente": "Sulfato de Magnesio (MgSO4 - Sal de Epsom)"
+    },
+    "azufre_S": {
+      "ratio": 20,
+      "fuente": "Sulfato de Magnesio (MgSO4)"
+    }
+  },
+
+  "microelementos": {
+    "comentario": "Rangos en ppm. Se agregan solo cuando hace falta (aprox cada 2-3 semanas)",
+    "hierro_Fe": {
+      "rango_ppm": "2-3",
+      "fuente": "Quelato de Hierro (Fe-DTPA)",
+      "sintomas_deficiencia": "Hojas nuevas amarillas con venas verdes (clorosis)"
+    },
+    "manganeso_Mn": {
+      "rango_ppm": "0.5-1",
+      "fuente": "Sulfato de Manganeso (MnSO4)",
+      "sintomas_deficiencia": "Manchitas marrones entre venas"
+    },
+    "zinc_Zn": {
+      "rango_ppm": "0.3-0.5",
+      "fuente": "Sulfato de Zinc (ZnSO4)",
+      "sintomas_deficiencia": "Crecimiento raquítico, hojas distorsionadas"
+    },
+    "cobre_Cu": {
+      "rango_ppm": "0.1-0.2",
+      "fuente": "Sulfato de Cobre (CuSO4)",
+      "sintomas_deficiencia": "Marchitez de brotes nuevos"
+    },
+    "boro_B": {
+      "rango_ppm": "0.5-1",
+      "fuente": "Bórax (Na2B4O7)",
+      "sintomas_deficiencia": "Aborto de flores, deformación de frutos"
+    },
+    "molibdeno_Mo": {
+      "rango_ppm": "0.05-0.1",
+      "fuente": "Molibdato de Sodio (Na2MoO4)",
+      "sintomas_deficiencia": "Enrollamiento de hojas, aspectos marchitos"
+    }
+  },
+
+  "parametros_seguridad_agua": {
+    "temperatura_agua": {
+      "ideal_min": 18,
+      "ideal_max": 24,
+      "unidad": "°C",
+      "peligro_si": "Si >28°C favorece Pythium y problemas de raíz"
+    },
+    "ph": {
+      "ideal_min": 5.5,
+      "ideal_max": 6.5,
+      "comentario": "Fuera de este rango, nutrientes no se absorben bien"
+    },
+    "humedad_relativa": {
+      "ideal_min": 50,
+      "ideal_max": 70,
+      "peligro_si": ">80% favorece hongos"
+    },
+    "oxigeno_disuelto": {
+      "minimo_recomendado": 6,
+      "unidad": "ppm",
+      "comentario": "Usar aireadores 24/7 para mantener este nivel"
+    }
+  },
+
+  "recomendaciones_aplicacion": [
+    "MACROELEMENTOS: Mezclar en agua antes de agregar al tanque",
+    "ORDEN DE ADICIÓN: SIEMPRE N → P → K → Ca → Mg → S",
+    "ESPERAR: 10 minutos entre cada nutriente",
+    "MICROELEMENTOS: Agregar como mezcla lista (los 6 juntos)",
+    "FRECUENCIA: Macros cada vez que los ppm bajen; Micros cada 2-3 semanas",
+    "CAMBIOS DE AGUA: Hacerlos cuando PPM supere 1.3x el rango ideal",
+    "MEDICIÓN: Siempre medir con sensor calibrado DESPUÉS de 5 minutos de mezclar"
+  ],
+
+  "formula_calculo": {
+    "comentario_bajos": "Si ppm está bajo",
+    "formula_bajos": "ppm_faltante = ppm_ideal_min - ppm_actual",
+    "dosis_elemento": "dosis_gramos = (ratio * ppm_faltante / 600) * (volumen_litros / 1000)",
+    
+    "comentario_altos": "Si ppm está alto",
+    "formula_porcentaje": "% cambio = (ppm_actual - ppm_ideal) / ppm_actual * 100",
+    "volumen_drenar": "volumen_a_drenar = volumen_tanque * (% cambio / 100)"
+  },
+
+  "ejemplo_practico_bajo": {
+    "situacion": "Tanque 100L, Vegetativa (400-800), PPM actual 350",
+    "calculo": {
+      "ppm_faltante": "400 - 350 = 50 ppm",
+      "nitrogeno": "(150 * 50 / 600) * (100 / 1000) = 1.25 g",
+      "fosforo": "(40 * 50 / 600) * (100 / 1000) = 0.33 g",
+      "resultado": "Agregar 1.25g N, 0.33g P, etc al tanque"
+    }
+  },
+
+  "ejemplo_practico_alto": {
+    "situacion": "Tanque 100L, Vegetativa (400-800), PPM actual 1100",
+    "calculo": {
+      "ppm_ideal": "600",
+      "ppm_exceso": "1100 - 600 = 500 ppm",
+      "porcentaje": "(1100 - 600) / 1100 * 100 = 45.45%",
+      "resultado": "Cambiar 45.45 L de agua (45.45%) del tanque"
+    }
+  }
+}
