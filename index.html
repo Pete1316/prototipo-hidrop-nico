@@ -1,0 +1,3752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes" />
+<meta name="description" content="Prototipo hidropónicos" />
+<meta name="theme-color" content="#059669" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Hidropónica" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23059669' width='180' height='180' rx='40'/><text x='90' y='90' font-size='100' fill='white' text-anchor='middle' dominant-baseline='middle' font-weight='bold'>H</text></svg>" />
+<link rel="manifest" href="manifest.json" />
+<!-- PWA Preload -->
+<link rel="preload" href="src/estilo.css" as="style" />
+<title>Monitoreo Hidropónico - Sensores en Tiempo Real</title>
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    'hidro-green': '#059669',
+                    'hidro-blue': '#0891b2',
+                    'hidro-teal': '#0284c7',
+                    'hidro-orange': '#f59e0b',
+                    'hidro-indigo': '#6366f1'
+                },
+                backdropBlur: {
+                    'glass': '10px'
+                }
+            }
+        }
+    }
+</script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/estilo.css?v=20260303">
+<style>
+    /* Estilo adicional para asegurar que el fondo no cambie si el CSS externo lo fuerza */
+    body.modo-docente-activo {
+        background-color: inherit !important; 
+    }
+    /* Soporte para notches en dispositivos */
+    .navbar { padding-top: max(10px, env(safe-area-inset-top)); }
+    .container { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+    
+    /* ===== FIX ACCORDION BOOTSTRAP ===== */
+    .accordion-collapse {
+        display: none !important;
+    }
+    .accordion-collapse.show {
+        display: block !important;
+    }
+    .accordion-body {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* ===== GLASSMORPHISM CON TAILWIND ===== */
+    .glass {
+        @apply bg-white/70 backdrop-blur-glass border border-white/20 rounded-xl shadow-lg;
+    }
+    
+    .glass-dark {
+        @apply bg-hidro-green/10 backdrop-blur-glass border border-hidro-green/20 rounded-xl shadow-lg;
+    }
+    
+    .glass-card {
+        @apply bg-white/75 backdrop-blur-glass border border-white/20 rounded-lg shadow-md hover:shadow-lg transition-all duration-300;
+    }
+    
+    /* Transiciones suaves */
+    .transition-glass {
+        @apply transition-all duration-300 ease-in-out;
+    }
+    
+    /* Gradientes Tailwind */
+    .gradient-hidro {
+        @apply bg-gradient-to-r from-hidro-green to-hidro-blue;
+    }
+    
+    .gradient-hidro-subtle {
+        @apply bg-gradient-to-br from-hidro-green/10 to-hidro-blue/10;
+    }
+    
+    /* Efecto hover moderno */
+    .hover-lift {
+        @apply hover:shadow-2xl hover:-translate-y-1 transition-all duration-300;
+    }
+    
+    /* Botones con glassmorphism */
+    .btn-glass {
+        @apply bg-hidro-green/80 backdrop-blur-glass border border-white/20 text-white font-medium rounded-lg hover:bg-hidro-green shadow-md transition-all duration-300;
+    }
+    
+    .btn-glass:hover {
+        @apply shadow-lg -translate-y-0.5;
+    }
+    
+    /* Cards mejoradas */
+    .card-glass {
+        @apply glass-card;
+    }
+    
+    /* ===== ANIMACIÓN DE PULSO PARA ALERTAS PPM ===== */
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+        }
+        50% {
+            opacity: 0.8;
+            box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+        }
+    }
+    
+    /* ===== NOTIFICACIONES ARRIBA-DERECHA ===== */
+    .notificacion {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        z-index: 9999;
+        max-width: 350px;
+        text-align: left;
+        animation: slideInRight 0.35s ease-out;
+        font-size: 15px;
+        font-weight: 500;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+    
+    .notificacion.exito {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-left: 5px solid #047857;
+    }
+    
+    .notificacion.advertencia {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        border-left: 5px solid #b45309;
+    }
+    
+    .notificacion.error {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border-left: 5px solid #991b1b;
+    }
+    
+    .notificacion.info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border-left: 5px solid #1e40af;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+    }
+    
+    .notificacion.cerrar {
+        animation: slideOutRight 0.35s ease-out forwards;
+    }
+    
+    /* ===== OCULTAR SPINNER DE NUMBER INPUT ===== */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+    
+    /* ===== BOTÓN AUTO PPM ACTIVO ===== */
+    #ppmAutoBtn.active {
+        background-color: #10b981 !important;
+        color: white !important;
+        border-color: #059669 !important;
+    }
+</style>
+</style>
+</head>
+<body>
+<!-- ===== CONTENEDOR PRINCIPAL ===== -->
+<div class="container my-4">
+<!-- HEADER -->
+<header class="text-center mb-4">
+<div class="d-flex justify-content-center align-items-center mb-3">
+    <div style="text-align: center;">
+        <h1><i class="fas me-2"></i>Prototipo Hidropónico</h1>
+        <p class="subtitle"><i class="fas fa-leaf me-2"></i>Tomate Hidropónico</p>
+    </div>
+</div>
+</header>
+<!-- PESTAÑAS PRINCIPALES -->
+<ul class="nav nav-tabs nav-fill mb-4" id="mainTabs" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab"
+data-bs-target="#dashboard" type="button" role="tab"
+aria-controls="dashboard" aria-selected="true">
+<i class="fas fa-tachometer-alt me-1"></i>Dashboard
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="enfermedades-tab" data-bs-toggle="tab"
+data-bs-target="#enfermedades" type="button" role="tab"
+aria-controls="enfermedades" aria-selected="false">
+<i class="fas fa-virus me-1"></i>Enfermedades
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="plagas-tab" data-bs-toggle="tab"
+data-bs-target="#plagas" type="button" role="tab"
+aria-controls="plagas" aria-selected="false">
+<i class="fas fa-bug me-1"></i>Plagas
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="prevencion-tab" data-bs-toggle="tab"
+data-bs-target="#prevencion" type="button" role="tab"
+aria-controls="prevencion" aria-selected="false">
+<i class="fas fa-shield-alt me-1"></i>Prevención
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="diagnostico-tab" data-bs-toggle="tab"
+data-bs-target="#diagnostico-pane" type="button" role="tab"
+aria-controls="diagnostico-pane" aria-selected="false">
+<i class="fas fa-stethoscope me-1"></i>Diagnóstico del Cultivo
+</button>
+</li>
+</ul>
+<!-- ===== CONTENIDO DE PESTAÑAS ===== -->
+<div class="tab-content" id="mainTabContent">
+<!-- ================= PESTAÑA 1: DASHBOARD ================= -->
+<div class="tab-pane fade show active" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
+<!-- Botón Información Técnica al inicio del Dashboard -->
+<div class="d-flex justify-content-between align-items-center mb-4" style="flex-wrap: wrap; gap: 1rem;">
+<div>
+<h5 style="margin: 0; color: var(--primary-color); font-weight: 800;"><i class="fas fa-tachometer-alt me-2"></i>Panel de Sensores</h5>
+</div>
+<button class="btn btn-success" onclick="toggleModoDocente()" id="btnDocente" aria-pressed="false" style="font-weight: 600; padding: 0.7rem 1.5rem;">
+<i class="fas fa-chalkboard-teacher me-2"></i>Información Técnica
+</button>
+</div>
+<div class="sensor-container">
+<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 mb-3">
+<!-- Temperatura Agua -->
+<div class="col">
+<div class="sensor-item">
+<div class="icon-label"><i class="fas fa-water fa-2x"></i> Temperatura Agua</div>
+<div class="value-wrapper"><span id="waterTempTop">--</span><span class="unit">°C</span></div>
+<div class="explicacion-docente">
+<strong>¿Qué mide?</strong> La temperatura del agua en el sistema hidropónico.<br>
+<strong>Rango ideal:</strong> 18°C - 24°C.<br>
+<strong>Importancia:</strong> Afecta la absorción de nutrientes y el oxígeno disuelto.
+</div>
+</div>
+</div>
+<!-- Temp. Ambiente -->
+<div class="col">
+<div class="sensor-item">
+<div class="icon-label"><i class="fas fa-thermometer-half fa-2x"></i> Temp. Ambiente</div>
+<div class="value-wrapper"><span id="dhtTempTop">--</span><span class="unit">°C</span></div>
+<div class="explicacion-docente">
+<strong>¿Qué mide?</strong> La temperatura del aire alrededor del cultivo.<br>
+<strong>Rango ideal:</strong> 20°C - 28°C.<br>
+<strong>Importancia:</strong> Influye en la fotosíntesis y transpiración.
+</div>
+</div>
+</div>
+<!-- Humedad -->
+<div class="col">
+<div class="sensor-item">
+<div class="icon-label"><i class="fas fa-tint fa-2x"></i> Humedad</div>
+<div class="value-wrapper"><span id="humTop">--</span><span class="unit">%</span></div>
+<div class="explicacion-docente">
+<strong>¿Qué mide?</strong> Humedad relativa del ambiente.<br>
+<strong>Rango ideal:</strong> 50% - 70%.<br>
+<strong>Importancia:</strong> Valores altos favorecen hongos; bajos causan estrés.
+</div>
+</div>
+</div>
+<!-- pH -->
+<div class="col">
+<div class="sensor-item">
+<div class="icon-label"><i class="fas fa-vial fa-2x"></i> pH</div>
+<div class="value-wrapper"><span id="phTop">--</span></div>
+<div class="explicacion-docente">
+<strong>¿Qué mide?</strong> Acidez o alcalinidad de la solución nutritiva.<br>
+<strong>Rango ideal:</strong> 5.5 - 6.5.<br>
+<strong>Importancia:</strong> Determina la disponibilidad de nutrientes.
+</div>
+</div>
+</div>
+<!-- TDS -->
+<div class="col">
+<div class="sensor-item">
+<div class="icon-label"><i class="fas fa-filter fa-2x"></i> TDS</div>
+<div class="value-wrapper"><span id="tdsTop">--</span><span class="unit">ppm</span></div>
+<div class="explicacion-docente">
+<strong>¿Qué mide?</strong> Sólidos Disueltos Totales.<br>
+<strong>Rango ideal:</strong> 400-1200 ppm según etapa.<br>
+<strong>Importancia:</strong> Indica la concentración total de nutrientes.
+</div>
+</div>
+</div>
+<!-- EC -->
+<div class="col">
+<div class="sensor-item">
+<div class="icon-label"><i class="fas fa-bolt fa-2x"></i> EC (sensor)</div>
+<div class="value-wrapper"><span id="ecTop">--</span><span class="unit">mS/cm</span></div>
+<div class="explicacion-docente">
+<strong>¿Qué mide?</strong> Conductividad Eléctrica.<br>
+<strong>Rango ideal:</strong> 1.0 - 3.5 mS/cm.<br>
+<strong>Importancia:</strong> Correlacionada con la concentración de nutrientes.
+</div>
+</div>
+</div>
+<!-- Nivel -->
+<div class="col">
+<div class="sensor-item">
+<div class="icon-label"><i class="fas fa-ruler-vertical fa-2x"></i> Nivel</div>
+<div class="value-wrapper"><span id="nivelTop">--</span></div>
+<div class="explicacion-docente">
+<strong>¿Qué mide?</strong> Nivel de agua en el tanque.<br>
+<strong>Estados:</strong> "Normal" o "Bajo".<br>
+<strong>Importancia:</strong> Evita interrupciones en el suministro.
+</div>
+</div>
+</div>
+</div>
+<div class="alert alert-info text-center mb-0 mt-3" id="connectionStatus">
+<i class="fas fa-sync-alt fa-spin me-2"></i>Conectando con sensores...
+</div>
+</div>
+<!-- SECCIÓN DE GRÁFICAS -->
+<div class="charts-container" style="contain: layout;">
+<h5><i class="fas fa-chart-line me-2"></i>Monitoreo en Tiempo Real</h5>
+<div class="row g-4">
+<div class="col-lg-6">
+<div class="chart-wrapper">
+<canvas id="temperatureChart"></canvas>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="chart-wrapper">
+<canvas id="phChart"></canvas>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="chart-wrapper">
+<canvas id="ecChart"></canvas>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="chart-wrapper">
+<canvas id="humidityChart"></canvas>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">
+
+
+</div>
+</div> <!-- Fin pestaña Dashboard -->
+<!-- ================= PESTAÑA DIAGNÓSTICO: DIAGNÓSTICO DEL CULTIVO ================= -->
+<div class="tab-pane fade" id="diagnostico-pane" role="tabpanel" aria-labelledby="diagnostico-tab">
+<div class="container my-4">
+<div class="box" id="diagnosticoBox" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);">
+<!-- HEADER CON CONTROLES PRINCIPALES -->
+<div class="text-center mb-4">
+<h4><i class="fas fa-stethoscope me-3" style="font-size: 1.5rem;"></i>Diagnóstico del Cultivo de Tomate</h4>
+<p class="text-muted mb-3"><i class="fas fa-info-circle me-2"></i>Complete los datos para generar diagnóstico y cálculo de nutrientes</p>
+</div>
+
+<!-- CONTROLES ORGANIZADOS EN GRID -->
+ 
+<div class="row justify-content-center g-3 mb-4">
+
+<!-- Días + Etapa Unidos -->
+       <div class="col-auto">
+                    <small class="form-label d-block fw-bold mb-2 text-center" style="font-size: 0.85rem;">
+                        <i class="fas fa-calendar-alt me-1"></i>Días
+                    </small>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="diasTomate" 
+                               class="form-control text-center" 
+                               value="21" 
+                               maxlength="3" 
+                               inputmode="numeric" 
+                               oninput="validarDias(this)" 
+                               placeholder="0" 
+                               style="width: 80px; font-weight: bold;">
+                    </div>
+                </div>
+            <div class="col-auto">
+                    <small class="form-label d-block fw-bold mb-2 text-center" style="font-size: 0.85rem;">
+                        <i class="fas fa-leaf me-1"></i>Etapa
+                    </small>
+                    <select class="form-select text-center" 
+                            id="etapaSelectNutrientes" 
+                            onchange="actualizarPpmRecomendada()"
+                            style="min-width: 190px; font-weight: 500;"
+                            disabled>
+                        <option value="plantula">🌱 Semilla</option>
+                        <option value="vegetativa" selected>🌿 Vegetativa</option>
+                        <option value="floracion">🌸 Floración</option>
+                        <option value="produccion">🍅 Producción</option>
+                    </select>
+            </div>
+            <div class="col-auto">
+                    <small class="form-label d-block fw-bold mb-2 text-center" style="font-size: 0.85rem;">
+                        <i class="fas fa-vial me-1"></i>Volumen
+                    </small>
+                    <div class="input-group">
+                        <input type="number" 
+                               class="form-control text-center" 
+                               id="volumeTanque" 
+                               min="1" 
+                               max="160" 
+                               value="100" 
+                               placeholder="100" 
+                               oninput="validarVolumen(this)" 
+                               style="width: 70px; font-weight: bold;">
+                        <span class="input-group-text">L</span>
+                    </div>
+            </div>
+                
+
+
+<!-- PPM con Switch -->
+<div class="col-auto">
+<label for="ppmInput" class="form-label fw-bold"><i class="fas fa-droplet me-1"></i>PPM</label>
+<div class="input-group" style="max-width: 200px;">
+<input type="number" class="form-control" id="ppmInput" min="0" max="1200" value="600" step="1" oninput="validarPPM(this)" onchange="calcularNutrientes()" placeholder="ppm" style="flex: 0 0 120px;">
+<button class="btn btn-outline-secondary" type="button" id="ppmAutoBtn" onclick="togglePpmAuto();" title="Modo automático" style="border-color: #dee2e6; white-space: nowrap;">
+<i class="fas fa-robot"></i> Auto
+</button>
+</div>
+<div class="mt-2" style="display: flex; gap: 8px;">
+<span class="badge bg-info text-white" style="padding: 8px 12px; font-size: 0.9rem; width: 90px; text-align: center;">
+<span id="ppmActualDashboard">--</span> ppm
+</span>
+<span class="badge bg-success text-white" id="ppmStatusBadge" style="display: none; padding: 8px 12px; font-size: 0.9rem; width: 100px; text-align: center;">Automático</span>
+</div>
+</div>
+</div>
+
+
+
+
+<!-- Botones de Acción -->
+<div class="row g-2 mb-3">
+<div class="col-12 col-md-6">
+<button class="btn btn-primary btn-sm w-100" onclick="calcularCompleto()">
+<i class="fas fa-calculator me-1"></i>Calcular
+</button>
+</div>
+<div class="col-12 col-md-6" style="display: none;">
+<button class="btn btn-danger btn-sm w-100" onclick="automatizarAjustePPM()" style="font-weight: 600;">
+<i class="fas fa-robot me-1"></i>⚙️ Calcular
+</button>
+</div>
+<div class="col-12 col-md-6">
+<button class="btn btn-success btn-sm w-100" onclick="generarReporte()" id="btnGenerarReporte" style="opacity: 0.6;" disabled>
+<i class="fas fa-file-pdf me-1"></i>Generar PDF
+</button>
+</div>
+</div>
+
+<!-- INFO EN BADGES COMPACTA -->
+<div class="alert alert-light border-1 border-info py-2 px-3 mb-3" role="alert" style="background-color: #f0f9ff;">
+<div class="d-flex flex-wrap gap-3 justify-content-center align-items-center">
+<div>
+<small class="text-muted d-block">Etapa Actual</small>
+<strong><i class="fas fa-leaf me-1"></i><span id="etapaActual">Vegetativa</span></strong>
+</div>
+<div class="vr"></div>
+<div>
+<small class="text-muted d-block">PPM Ideal</small>
+<strong style="color: #f59e0b;"><i class="fas fa-flask me-1"></i><span id="ppmRecomendada">400-800</span> ppm</strong>
+</div>
+
+</div>
+</div>
+
+<!-- TABS INTERNOS PARA ORGANIZAR LA INFORMACIÓN -->
+<div>
+<ul class="nav nav-tabs" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" id="diag-tab" data-bs-toggle="tab" data-bs-target="#diag-content" type="button" role="tab">
+<i class="fas  me-1"></i>Diagnóstico
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="automatizacion-tab" data-bs-toggle="tab" data-bs-target="#automatizacion-content" type="button" role="tab">
+<i class="fas  me-1"></i>Nutrientes
+</button>
+</li>
+<li class="nav-item" role="presentation" style="display: none;">
+<button class="nav-link" id="nutrientes-tab" data-bs-toggle="tab" data-bs-target="#nutrientes-content" type="button" role="tab">
+<i class="fas fa-flask me-1"></i>Nutrientes
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="dosis-tab" data-bs-toggle="tab" data-bs-target="#dosis-content" type="button" role="tab">
+<i class="fas  me-1"></i>Formulación
+</button>
+</li>
+</ul>
+
+<div class="tab-content mt-3">
+<!-- TAB 1: DIAGNÓSTICO -->
+<div class="tab-pane fade show active" id="diag-content" role="tabpanel" aria-labelledby="diag-tab">
+<div id="diagnostico" role="region" aria-live="polite">
+<div class="text-center text-muted py-5">
+<i class="fas fa-satellite-dish fa-2x mb-3"></i>
+<p>Ingrese los días y haga clic en "Calcular"</p>
+</div>
+</div>
+</div>
+
+<!-- TAB 2: AUTOMATIZACIÓN -->
+<div class="tab-pane fade" id="automatizacion-content" role="tabpanel" aria-labelledby="automatizacion-tab">
+<div id="resultadoAutomatizacion" style="padding: 20px;">
+<div class="text-center text-muted py-5">
+<i class="fas fa-robot fa-2x mb-3"></i>
+<p>Haga clic en "Calcular" para ver las recomendaciones aquí</p>
+</div>
+</div>
+</div>
+
+<!-- TAB 3: NUTRIENTES (Macro y Micro) -->
+<div class="tab-pane fade" id="nutrientes-content" role="tabpanel" aria-labelledby="nutrientes-tab" style="display: none;">
+<div class="row g-2">
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm h-100">
+<div class="card-header bg-warning text-dark" style="border-radius: 8px 8px 0 0;">
+<h6 class="mb-0"><i class="fas fa-arrow-up me-1"></i>Macroelementos</h6>
+</div>
+<div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+<table class="table table-sm table-hover mb-0">
+<thead class="table-light sticky-top">
+<tr><th>Elemento</th><th>Dosis</th><th>Fertilizante</th></tr>
+</thead>
+<tbody id="macroElementosBody">
+<tr><td colspan="3" class="text-center text-muted py-3">Calcular para ver datos</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm h-100">
+<div class="card-header bg-info text-white" style="border-radius: 8px 8px 0 0;">
+<h6 class="mb-0"><i class="fas fa-arrow-down me-1"></i>Microelementos</h6>
+</div>
+<div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+<table class="table table-sm table-hover mb-0">
+<thead class="table-light sticky-top">
+<tr><th>Elemento</th><th>Rango</th><th>Dosis</th></tr>
+</thead>
+<tbody id="microElementosBody">
+<tr><td colspan="3" class="text-center text-muted py-3">Calcular para ver datos</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- TAB 3: DOSIS POR VOLUMEN -->
+<div class="tab-pane fade" id="dosis-content" role="tabpanel" aria-labelledby="dosis-tab">
+<div id="resultadoVolumen" class="mt-2">
+<div class="text-center text-muted py-4">
+<i class="fas fa-droplet fa-2x mb-3"></i>
+<p>Ingrese el volumen y haga clic en "Calcular"</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+</div>
+</div>
+</div> <!-- Fin pestaña Diagnóstico -->
+<!-- ================= PESTAÑA 2: ENFERMEDADES ================= -->
+<div class="tab-pane fade" id="enfermedades" role="tabpanel" aria-labelledby="enfermedades-tab" data-lazy="true">
+<div class="container my-6">
+<div class="text-center mb-8">
+<h3 class="text-3xl font-bold bg-gradient-to-r from-hidro-green to-hidro-blue bg-clip-text text-transparent mb-2"><i class="fas fa-virus me-3"></i>Enfermedades Comunes en Tomate Hidropónico</h3>
+<p class="text-gray-600 text-sm">Identificación, síntomas y manejo de enfermedades fúngicas y bacterianas</p>
+</div>
+<div class="accordion glass-card p-4 rounded-xl" id="accordionEnfermedades">
+<!-- Tizón Tardío -->
+<div class="accordion-item rounded-lg mb-3 border-0 bg-white/70 backdrop-blur-glass border border-white/20 overflow-hidden">
+<h2 class="accordion-header bg-gradient-to-r from-red-50 to-transparent">
+<button class="accordion-button collapsed font-semibold text-gray-800" type="button" data-bs-toggle="collapse" data-bs-target="#tizon">
+<i class="fas fa-circle-exclamation text-red-500 me-3 text-lg"></i><span class="font-bold">Tizón Tardío (Phytophthora infestans)</span>
+</button>
+</h2>
+<div id="tizon" class="accordion-collapse collapse">
+<div class="accordion-body bg-white/50 p-4">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-blue font-bold mb-3"><i class="fas fa-search me-2"></i>Síntomas:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-green">•</span> Manchas marrones con halo amarillo en hojas</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">•</span> Podredumbre blanda en frutos</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">•</span> Polvo blanco en envés de hojas (esporas)</li>
+</ul>
+</div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-orange font-bold mb-3"><i class="fas fa-thermometer-half me-2"></i>Condiciones favorables:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Humedad > 90%</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Temperatura: 15-20°C</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Mala ventilación</li>
+</ul>
+</div>
+</div>
+<div class="my-4 h-px bg-gradient-to-r from-transparent via-hidro-green/20 to-transparent"></div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-green font-bold mb-3"><i class="fas fa-flask me-2"></i>Manejo en hidroponía:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Evitar salpicaduras de agua en follaje</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Desinfectar solución nutritiva con UV o peróxido</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Eliminar plantas infectadas inmediatamente</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Aplicar <strong>Bacillus subtilis</strong> como preventivo</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Fusarium -->
+<div class="accordion-item rounded-lg mb-3 border-0 bg-white/70 backdrop-blur-glass border border-white/20 overflow-hidden">
+<h2 class="accordion-header bg-gradient-to-r from-yellow-50 to-transparent">
+<button class="accordion-button collapsed font-semibold text-gray-800" type="button" data-bs-toggle="collapse" data-bs-target="#fusarium">
+<i class="fas fa-circle-exclamation text-yellow-600 me-3 text-lg"></i><span class="font-bold">Marchitez por Fusarium (Fusarium oxysporum)</span>
+</button>
+</h2>
+<div id="fusarium" class="accordion-collapse collapse">
+<div class="accordion-body bg-white/50 p-4">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-blue font-bold mb-3"><i class="fas fa-search me-2"></i>Síntomas:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-blue">•</span> Amarillamiento unilateral de hojas</li>
+<li class="flex items-start gap-2"><span class="text-hidro-blue">•</span> Marchitez en horas cálidas, recuperación nocturna</li>
+<li class="flex items-start gap-2"><span class="text-hidro-blue">•</span> Vasos conductores marrones al cortar tallo</li>
+</ul>
+</div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-orange font-bold mb-3"><i class="fas fa-thermometer-half me-2"></i>Condiciones favorables:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Temperatura del agua > 28°C</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> pH fuera de rango ideal</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Estrés hídrico o nutricional</li>
+</ul>
+</div>
+</div>
+<div class="my-4 h-px bg-gradient-to-r from-transparent via-hidro-blue/20 to-transparent"></div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-green font-bold mb-3"><i class="fas fa-flask me-2"></i>Manejo en hidroponía:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Mantener temperatura del agua 18-24°C</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Usar <strong>Trichoderma harzianum</strong> en sustrato</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Rotar cultivos y desinfectar sistema entre ciclos</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Botrytis -->
+<div class="accordion-item rounded-lg mb-3 border-0 bg-white/70 backdrop-blur-glass border border-white/20 overflow-hidden">
+<h2 class="accordion-header bg-gradient-to-r from-gray-100 to-transparent">
+<button class="accordion-button collapsed font-semibold text-gray-800" type="button" data-bs-toggle="collapse" data-bs-target="#botrytis">
+<i class="fas fa-circle-exclamation text-gray-600 me-3 text-lg"></i><span class="font-bold">Moho Gris (Botrytis cinerea)</span>
+</button>
+</h2>
+<div id="botrytis" class="accordion-collapse collapse">
+<div class="accordion-body bg-white/50 p-4">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-blue font-bold mb-3"><i class="fas fa-search me-2"></i>Síntomas:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-gray-500">•</span> Manchas acuosas en hojas y tallos</li>
+<li class="flex items-start gap-2"><span class="text-gray-500">•</span> Polvo gris característico en zonas húmedas</li>
+<li class="flex items-start gap-2"><span class="text-gray-500">•</span> Pudrición blanda en frutos maduros</li>
+</ul>
+</div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-orange font-bold mb-3"><i class="fas fa-thermometer-half me-2"></i>Condiciones favorables:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Humedad relativa > 85%</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Temperatura: 18-23°C</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Condensación en hojas</li>
+</ul>
+</div>
+</div>
+<div class="my-4 h-px bg-gradient-to-r from-transparent via-gray-300/20 to-transparent"></div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-green font-bold mb-3"><i class="fas fa-flask me-2"></i>Manejo en hidroponía:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Mejorar ventilación y circulación de aire</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Evitar mojar follaje al regar</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Remover flores y frutos senescentes</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Pythium -->
+<div class="accordion-item rounded-lg border-0 bg-white/70 backdrop-blur-glass border border-white/20 overflow-hidden">
+<h2 class="accordion-header bg-gradient-to-r from-red-50 to-transparent">
+<button class="accordion-button collapsed font-semibold text-gray-800" type="button" data-bs-toggle="collapse" data-bs-target="#pythium">
+<i class="fas fa-circle-exclamation text-red-500 me-3 text-lg"></i><span class="font-bold">Podredumbre de Raíz (Pythium spp.)</span>
+</button>
+</h2>
+<div id="pythium" class="accordion-collapse collapse">
+<div class="accordion-body bg-white/50 p-4">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-blue font-bold mb-3"><i class="fas fa-search me-2"></i>Síntomas:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-red-500">•</span> Raíces marrones, blandas y con mal olor</li>
+<li class="flex items-start gap-2"><span class="text-red-500">•</span> Crecimiento raquítico y amarillamiento</li>
+<li class="flex items-start gap-2"><span class="text-red-500">•</span> Marchitez a pesar de humedad adecuada</li>
+</ul>
+</div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-orange font-bold mb-3"><i class="fas fa-thermometer-half me-2"></i>Condiciones favorables:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Agua estancada o mal oxigenada</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Temperatura del agua > 25°C</li>
+<li class="flex items-start gap-2"><span class="text-hidro-orange">•</span> Bajos niveles de oxígeno disuelto</li>
+</ul>
+</div>
+</div>
+<div class="my-4 h-px bg-gradient-to-r from-transparent via-red-300/20 to-transparent"></div>
+<div class="glass-dark p-4 rounded-lg">
+<h6 class="text-hidro-green font-bold mb-3"><i class="fas fa-flask me-2"></i>Manejo en hidroponía:</h6>
+<ul class="text-sm space-y-1 text-gray-700">
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Mantener oxígeno disuelto > 6 ppm (usar aireadores)</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Temperatura del agua: 18-22°C ideal</li>
+<li class="flex items-start gap-2"><span class="text-hidro-green">✓</span> Aplicar <strong>peróxido de hidrógeno</strong> (H₂O₂) en dosis controladas</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="alert glass-dark border-l-4 border-hidro-green mt-6 p-4 rounded-lg bg-hidro-green/10">
+<i class="fas fa-lightbulb text-hidro-green me-3 text-lg"></i>
+<strong class="text-hidro-green">💡 Nota académica:</strong> 
+<p class="text-sm text-gray-700 mt-2">En sistemas hidropónicos, la prevención es clave. La mayoría de enfermedades fúngicas se propagan por agua contaminada. Mantén la higiene del sistema y monitorea constantemente.</p>
+</div>
+</div>
+</div>
+<!-- ================= PESTAÑA 3: PLAGAS ================= -->
+<div class="tab-pane fade" id="plagas" role="tabpanel" aria-labelledby="plagas-tab" data-lazy="true" style="will-change: contents;">
+<div class="container my-4">
+<h3 class="text-center mb-5 text-success"><i class="fas fa-bug me-2"></i>Plagas en Cultivo de Tomate</h3>
+<div class="row g-4" style="will-change: contents; contain: layout;">
+<!-- Áfidos -->
+<div class="col-md-6 col-lg-4">
+<div class="card h-100 border-success">
+<div class="card-header bg-success text-white">
+<i class="fas fa-spider me-1"></i>Áfidos / Pulgones
+</div>
+<div class="card-body">
+<h6 class="card-title"><i class="fas fa-eye me-1"></i>Identificación:</h6>
+<p class="card-text small">Insectos pequeños (1-3 mm), verdes/negros, agrupados en envés de hojas.</p>
+<h6><i class="fas fa-exclamation-triangle me-1"></i>Daños:</h6>
+<ul class="small mb-2">
+<li>Deformación de hojas y brotes</li>
+<li>Secreción de melaza (atrae hormigas)</li>
+<li>Transmisión de virus (CMV, ToMV)</li>
+</ul>
+<h6><i class="fas fa-shield-alt me-1"></i>Control:</h6>
+<ul class="small mb-0">
+<li><strong>Biológico:</strong> <em>Aphidius colemani</em></li>
+<li><strong>Orgánico:</strong> Jabón potásico + aceite de neem</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Mosca Blanca -->
+<div class="col-md-6 col-lg-4">
+<div class="card h-100 border-warning">
+<div class="card-header bg-warning text-dark">
+<i class="fas fa-dove me-1"></i>Mosca Blanca
+</div>
+<div class="card-body">
+<h6 class="card-title"><i class="fas fa-eye me-1"></i>Identificación:</h6>
+<p class="card-text small">Pequeñas moscas blancas (2 mm) que vuelan al perturbar la planta.</p>
+<h6><i class="fas fa-exclamation-triangle me-1"></i>Daños:</h6>
+<ul class="small mb-2">
+<li>Amarillamiento y debilitamiento</li>
+<li>Transmisión de virus (TYLCV)</li>
+<li>Desarrollo de fumagina</li>
+</ul>
+<h6><i class="fas fa-shield-alt me-1"></i>Control:</h6>
+<ul class="small mb-0">
+<li><strong>Biológico:</strong> <em>Encarsia formosa</em></li>
+<li><strong>Mecánico:</strong> Trampas cromáticas amarillas</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Araña Roja -->
+<div class="col-md-6 col-lg-4">
+<div class="card h-100 border-danger">
+<div class="card-header bg-danger text-white">
+<i class="fas fa-spider me-1"></i>Araña Roja
+</div>
+<div class="card-body">
+<h6 class="card-title"><i class="fas fa-eye me-1"></i>Identificación:</h6>
+<p class="card-text small">Ácaros diminutos (0.5 mm) rojizos. Producen telarañas finas.</p>
+<h6><i class="fas fa-exclamation-triangle me-1"></i>Daños:</h6>
+<ul class="small mb-2">
+<li>Punteado amarillento en hojas</li>
+<li>Secado prematuro y caída</li>
+<li>Reducción de fotosíntesis</li>
+</ul>
+<h6><i class="fas fa-shield-alt me-1"></i>Control:</h6>
+<ul class="small mb-0">
+<li><strong>Ambiental:</strong> Aumentar humedad > 60%</li>
+<li><strong>Biológico:</strong> <em>Phytoseiulus persimilis</em></li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Trips -->
+<div class="col-md-6 col-lg-4">
+<div class="card h-100 border-info">
+<div class="card-header bg-info text-white">
+<i class="fas fa-wind me-1"></i>Trips
+</div>
+<div class="card-body">
+<h6 class="card-title"><i class="fas fa-eye me-1"></i>Identificación:</h6>
+<p class="card-text small">Insectos alargados (1 mm), muy móviles. Se esconden en flores.</p>
+<h6><i class="fas fa-exclamation-triangle me-1"></i>Daños:</h6>
+<ul class="small mb-2">
+<li>Raspaduras plateadas en hojas</li>
+<li>Deformación de flores</li>
+<li>Vector del virus TSWV</li>
+</ul>
+<h6><i class="fas fa-shield-alt me-1"></i>Control:</h6>
+<ul class="small mb-0">
+<li><strong>Monitoreo:</strong> Trampas azules</li>
+<li><strong>Biológico:</strong> <em>Amblyseius swirskii</em></li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Minador -->
+<div class="col-md-6 col-lg-4">
+<div class="card h-100 border-secondary">
+<div class="card-header bg-secondary text-white">
+<i class="fas fa-pencil-alt me-1"></i>Minador de Hojas
+</div>
+<div class="card-body">
+<h6 class="card-title"><i class="fas fa-eye me-1"></i>Identificación:</h6>
+<p class="card-text small">Moscas pequeñas. Larvas crean "minas" serpenteantes blancas.</p>
+<h6><i class="fas fa-exclamation-triangle me-1"></i>Daños:</h6>
+<ul class="small mb-2">
+<li>Reducción de área fotosintética</li>
+<li>Caída prematura de hojas</li>
+</ul>
+<h6><i class="fas fa-shield-alt me-1"></i>Control:</h6>
+<ul class="small mb-0">
+<li><strong>Mecánico:</strong> Eliminar hojas minadas</li>
+<li><strong>Preventivo:</strong> Mallas anti-insectos</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Gusanos -->
+<div class="col-md-6 col-lg-4">
+<div class="card h-100 border-dark">
+<div class="card-header bg-dark text-white">
+<i class="fas fa-caterpillar me-1"></i>Gusanos Cortadores
+</div>
+<div class="card-body">
+<h6 class="card-title"><i class="fas fa-eye me-1"></i>Identificación:</h6>
+<p class="card-text small">Larvas de lepidópteros. Cortan tallos jóvenes o perforan frutos.</p>
+<h6><i class="fas fa-exclamation-triangle me-1"></i>Daños:</h6>
+<ul class="small mb-2">
+<li>Plantulas cortadas a nivel del suelo</li>
+<li>Frutos con galerías</li>
+</ul>
+<h6><i class="fas fa-shield-alt me-1"></i>Control:</h6>
+<ul class="small mb-0">
+<li><strong>Biológico:</strong> <em>Bacillus thuringiensis</em> (Bt)</li>
+<li><strong>Mecánico:</strong> Revisión manual</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="alert alert-warning mt-4">
+<i class="fas fa-book me-2"></i>
+<strong>Enfoque MIP:</strong> Combina monitoreo constante, umbrales de acción y control biológico.
+</div>
+</div>
+</div>
+<!-- ================= PESTAÑA 4: PREVENCIÓN ================= -->
+<div class="tab-pane fade" id="prevencion" role="tabpanel" aria-labelledby="prevencion-tab" data-lazy="true" style="will-change: contents;">
+<div class="container my-4">
+<h3 class="text-center mb-5" style="color: var(--primary-color);"><i class="fas fa-shield-alt me-2"></i>Estrategias de Prevención y Guía de Cultivo</h3>
+<!-- NUEVA SECCIÓN: ETAPAS DEL TOMATE -->
+<div class="row g-4 mb-5" style="will-change: contents; contain: layout;">
+<h5 class="w-100 text-center fw-bold mb-3">📅 Etapas de Desarrollo del Tomate</h5>
+<div class="col-md-6 col-lg-3">
+<div class="card h-100 border-0 shadow">
+<div class="card-body text-center">
+<h6 class="fw-bold mb-2" style="color: var(--info-color);">🌱 Semilla/Plántula</h6>
+<small class="text-muted">Días 0-20</small>
+<hr>
+<p class="small">
+<strong>Características:</strong> Germinación, primeras hojas<br>
+<strong>TDS:</strong> 0-400 ppm<br>
+<strong>EC:</strong> 0.5-1.5 mS/cm<br>
+<strong>Luz:</strong> 14-16 h/día
+</p>
+</div>
+</div>
+</div>
+<div class="col-md-6 col-lg-3">
+<div class="card h-100 border-0 shadow">
+<div class="card-body text-center">
+<h6 class="fw-bold mb-2" style="color: var(--success-color);">🌿 Vegetativa</h6>
+<small class="text-muted">Días 21-40</small>
+<hr>
+<p class="small">
+<strong>Características:</strong> Ramificación, crecimiento<br>
+<strong>TDS:</strong> 400-800 ppm<br>
+<strong>EC:</strong> 1.2-2.2 mS/cm<br>
+<strong>Temperatura:</strong> 20-28°C
+</p>
+</div>
+</div>
+</div>
+<div class="col-md-6 col-lg-3">
+<div class="card h-100 border-0 shadow">
+<div class="card-body text-center">
+<h6 class="fw-bold mb-2" style="color: var(--warning-color);">🌸 Floración</h6>
+<small class="text-muted">Días 41-70</small>
+<hr>
+<p class="small">
+<strong>Características:</strong> Flores, primeros frutos<br>
+<strong>TDS:</strong> 800-1100 ppm<br>
+<strong>EC:</strong> 2.0-2.8 mS/cm<br>
+<strong>Humedad:</strong> 50-70%
+</p>
+</div>
+</div>
+</div>
+<div class="col-md-6 col-lg-3">
+<div class="card h-100 border-0 shadow">
+<div class="card-body text-center">
+<h6 class="fw-bold mb-2" style="color: var(--primary-color);">🍅 Producción</h6>
+<small class="text-muted">Días 71-120</small>
+<hr>
+<p class="small">
+<strong>Características:</strong> Cosecha, maduración<br>
+<strong>TDS:</strong> 1000-1200 ppm<br>
+<strong>EC:</strong> 2.5-3.0 mS/cm<br>
+<strong>Luz:</strong> 14-16 h/día
+</p>
+</div>
+</div>
+</div>
+</div>
+<div class="row g-4">
+<!-- Columna 1 -->
+<div class="col-lg-6">
+<div class="card h-100 border-0 shadow" style="border-left: 5px solid var(--info-color);">
+<div class="card-header text-white" style="background: var(--info-color) !important;">
+<i class="fas fa-cogs me-1"></i>Manejo del Sistema Hidropónico
+</div>
+<div class="card-body">
+<h6 class="fw-bold"><i class="fas fa-tint me-1"></i>Calidad del Agua<span class="badge bg-danger ms-2">Crítico</span></h6>
+<ul class="small mb-3">
+<li><strong>pH:</strong> 5.5-6.5 para disponibilidad óptima</li>
+<li><strong>EC:</strong> Ajustar según etapa fenológica</li>
+<li><strong>Temp:</strong> 18-24°C para inhibir hongos</li>
+</ul>
+<h6 class="fw-bold"><i class="fas fa-broom me-1"></i>Higiene<span class="badge bg-success ms-2">Preventivo</span></h6>
+<ul class="small mb-0">
+<li>Desinfectar tanques entre ciclos</li>
+<li>Usar calzado exclusivo dentro del invernadero</li>
+<li>Limpiar herramientas con alcohol 70% diariamente</li>
+<li>Cambiar ropa antes de entrar al cultivo</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Columna 2 -->
+<div class="col-lg-6">
+<div class="card h-100 border-0 shadow" style="border-left: 5px solid var(--success-color);">
+<div class="card-header text-white" style="background: var(--success-color) !important;">
+<i class="fas fa-seedling me-1"></i>Manejo Agronómico
+</div>
+<div class="card-body">
+<h6 class="fw-bold"><i class="fas fa-sun me-1"></i>Ambiente<span class="badge bg-warning ms-2">Monitoreo</span></h6>
+<ul class="small mb-3">
+<li><strong>Ventilación:</strong> 30-60 renovaciones/hora</li>
+<li><strong>Humedad:</strong> 50-70% relativo (evitar >80%)</li>
+<li><strong>Luz:</strong> 14-16 h/día para vegetativo</li>
+<li><strong>Temperatura:</strong> Noche 14-16°C, Día 22-26°C</li>
+</ul>
+<h6 class="fw-bold"><i class="fas fa-user-graduate me-1"></i>Prácticas<span class="badge bg-info ms-2">Semanal</span></h6>
+<ul class="small mb-0">
+<li><strong>Desbrote:</strong> Semanalmente (brotes auxiliares)</li>
+<li><strong>Tutorado:</strong> Guiar tallos verticalmente</li>
+<li><strong>Poda:</strong> Retirar 2-3 hojas bajo racimos listos</li>
+<li><strong>Aclareo:</strong> Máximo 3-4 frutos por racimo</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Columna 3: NUEVA -->
+<div class="col-lg-6">
+<div class="card h-100 border-0 shadow" style="border-left: 5px solid var(--primary-color);">
+<div class="card-header text-white" style="background: var(--primary-color) !important;">
+<i class="fas fa-heartbeat me-1"></i>Control Integrado de Plagas (MIP)
+</div>
+<div class="card-body">
+<h6 class="fw-bold"><i class="fas fa-magnifying-glass me-1"></i>Monitoreo Preventivo</h6>
+<ul class="small mb-3">
+<li>Inspecciones 3 veces/semana en envés de hojas</li>
+<li>Trampas cromáticas (amarillas y azules)</li>
+<li>Registrar insectos capturados y umbral de acción</li>
+</ul>
+<h6 class="fw-bold"><i class="fas fa-leaf me-1"></i>Preparación Biológica</h6>
+<ul class="small mb-0">
+<li>Introducir <em>Phytoseiulus persimilis</em> preventivamente</li>
+<li>Usar bacillus thuringiensis (Bt) antes de infestación</li>
+<li>Evitar insecticidas químicos en primeros 30 días</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Columna 4: NUEVA -->
+<div class="col-lg-6">
+<div class="card h-100 border-0 shadow" style="border-left: 5px solid var(--warning-color);">
+<div class="card-header text-white" style="background: var(--warning-color) !important;">
+<i class="fas fa-clipboard-list me-1"></i>Monitoreo y Registro
+</div>
+<div class="card-body">
+<div class="row g-2">
+<div class="col-12">
+<h6><i class="fas fa-chart-line me-1"></i>Indicadores Diarios</h6>
+<small>
+pH, EC, TDS, Temperatura, Humedad, Nivel de agua
+</small>
+</div>
+<div class="col-12">
+<h6><i class="fas fa-search me-1"></i>Inspección Semanal</h6>
+<small>
+Plagas/enfermedades, Altura de planta, Color de hojas, Sanidad de frutas
+</small>
+</div>
+<div class="col-12">
+<h6><i class="fas fa-book me-1"></i>Bitácora Obligatoria</h6>
+<small>
+<strong class="text-danger">Registre cada intervención:</strong> Fecha, hora, observación, acción y resultado
+</small>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ===== MODAL CONFIGURACIÓN DE REPORTE (ACTUALIZADO) ===== -->
+<!-- ===== MODAL CONFIGURACIÓN DE REPORTE (VALIDACIONES CORREGIDAS) ===== -->
+<div class="modal fade" id="modalConfigReporte" tabindex="-1"
+aria-labelledby="modalConfigReporteLabel" aria-hidden="true"
+data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal-dialog modal-dialog-centered modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="modalConfigReporteLabel">
+<i class="fas fa-file-signature me-2"></i>Configurar Reporte
+</h5>
+<button type="button" class="btn-close btn-close-white"
+data-bs-dismiss="modal" aria-label="Cerrar" id="btnCerrarModal"></button>
+</div>
+<div class="modal-body">
+<p class="text-muted mb-4">
+<i class="fas fa-info-circle me-1"></i>Complete los datos para generar el informe técnico
+</p>
+<form id="formReporte" novalidate>
+<div class="row g-4">
+<!-- Nombre del Responsable - ANCHO COMPLETO -->
+<div class="col-12">
+<label for="nombreResponsable" class="form-label required-field">
+<i class="fas fa-user me-2"></i>Nombre del Responsable
+</label>
+<input type="text"
+class="form-control"
+id="nombreResponsable"
+placeholder="Juan Pérez García"
+pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\.]+$"
+title="Solo se permiten letras, espacios y puntos."
+maxlength="35"
+oninput="this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s\.]/g, '').slice(0,35);"
+required>
+<div class="invalid-feedback">
+<i class="fas fa-exclamation-circle me-1"></i>Ingrese un nombre válido (solo letras, máx. 35 caracteres).
+</div>
+<small class="form-text"><i class="fas fa-keyboard me-1"></i><span id="nombreCount">0</span>/35 caracteres</small>
+</div>
+<!-- Semestre y Paralelo - LADO A LADO -->
+<div class="col-md-6 col-sm-6">
+<label for="semestre" class="form-label required-field">
+<i class="fas fa-book me-2"></i>Semestre
+</label>
+<input type="text"
+class="form-control"
+id="semestre"
+placeholder="5"
+pattern="^[1-9]$"
+title="Número del 1 al 9"
+maxlength="1"
+inputmode="numeric"
+oninput="this.value = this.value.replace(/[^1-9]/g, '').slice(0,1)"
+required>
+<div class="invalid-feedback">
+<i class="fas fa-exclamation-circle me-1"></i>Número del 1 al 9
+</div>
+</div>
+<div class="col-md-6 col-sm-6">
+<label for="paralelo" class="form-label required-field">
+<i class="fas fa-users me-2"></i>Paralelo
+</label>
+<input type="text"
+class="form-control"
+id="paralelo"
+placeholder="A"
+pattern="^[A-Za-z]$"
+title="Una sola letra (A-Z)"
+maxlength="1"
+oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase()"
+required>
+<div class="invalid-feedback">
+<i class="fas fa-exclamation-circle me-1"></i>Una sola letra (A-Z)
+</div>
+</div>
+<!-- Observaciones Técnicas - ANCHO COMPLETO -->
+<div class="col-12">
+<label for="observacionesTecnicas" class="form-label">
+<i class="fas fa-clipboard-list me-2"></i>Observaciones Técnicas <span class="text-muted small">(Opcional)</span>
+</label>
+<textarea class="form-control"
+id="observacionesTecnicas"
+placeholder="Ej: Revisar bomba de agua | Cambiar solución nutritiva | Ajustar pH..."
+maxlength="500"
+oninput="this.value = this.value.slice(0,500);"></textarea>
+<small class="form-text"><i class="fas fa-keyboard me-1"></i><span id="obsCount">0</span>/500 caracteres</small>
+</div>
+</div>
+</form>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-width: 2px; font-weight: 600;">
+<i class="fas fa-times me-2"></i>Cancelar
+</button>
+<button type="button" class="btn btn-success" onclick="confirmarYDescargarPDF()" style="font-weight: 600; padding: 0.7rem 1.8rem;">
+<i class="fas fa-download me-2"></i>Descargar PDF
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ===== MODAL DE ALERTA CENTRALIZADO ===== -->
+<div class="modal fade" id="modalAlerta" tabindex="-1" aria-labelledby="modalAlertaLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal-dialog modal-dialog-centered">
+<div class="modal-content border-warning">
+<div class="modal-header bg-warning text-dark">
+<h5 class="modal-title fw-bold" id="modalAlertaLabel">
+<i class="fas fa-exclamation-triangle me-2"></i>Alerta de PPM
+</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+</div>
+<div class="modal-body">
+<p id="modalAlertaTexto" class="mb-0" style="font-size: 1.1rem; color: #333;"></p>
+<div class="alert alert-warning mt-3 mb-0" role="alert" style="font-size: 0.9rem;">
+<i class="fas fa-lightbulb me-2"></i>
+<strong>Recomendación:</strong> Ajuste el valor de PPM dentro del rango recomendado para obtener mejores resultados en el cálculo de nutrientes.
+</div>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+<i class="fas fa-check me-1"></i>Entendido
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Scripts -->
+<script>
+/* ===== MODO DOCENTE ===== */
+let modoDocenteActivo = false;
+function toggleModoDocente(){
+    modoDocenteActivo = !modoDocenteActivo;
+    const explicaciones = document.querySelectorAll(".explicacion-docente");
+    const boton = document.getElementById("btnDocente");
+    explicaciones.forEach(exp => {
+        exp.style.display = modoDocenteActivo ? "block" : "none";
+    });
+    
+    // ✅ CORRECCIÓN: Se eliminó la línea que cambiaba el color de fondo del body
+    // document.body.classList.toggle("modo-docente-activo"); 
+    
+    if(modoDocenteActivo){
+        boton.textContent = "Ocultar Información Técnica ";
+        boton.setAttribute('aria-pressed', 'true');
+        // Opcional: Si tampoco quieres que el botón se ponga verde, descomenta la siguiente línea:
+        // boton.classList.remove('btn-outline-success'); 
+        boton.classList.add('btn-outline-success'); 
+    } else {
+        boton.textContent = "Información Técnica";
+        boton.setAttribute('aria-pressed', 'false');
+        boton.classList.remove('btn-outline-success');
+    }
+}
+
+/* ===== CALCULADORA DE SOLUCIÓN NUTRITIVA ===== */
+const formulasNutrientes = {
+    plantula: {
+        min: 0, max: 400, ec: "0.5-1.5",
+        macroElementos: {
+            N: { ppm: 0, fertilizante: "Nitrato de Calcio / Nitrato de Potasio" },
+            P: { ppm: 0, fertilizante: "Superfosfato o Fosfato Monoamónico" },
+            K: { ppm: 0, fertilizante: "Sulfato de Potasio" },
+            Ca: { ppm: 0, fertilizante: "Nitrato de Calcio" },
+            Mg: { ppm: 0, fertilizante: "Sulfato de Magnesio (Epsom)" },
+            S: { ppm: 0, fertilizante: "Sulfato de Potasio o Magnesio" }
+        },
+        microElementos: {
+            Fe: { rango: "2-5", source: "Quelato de Fe (DTPA/EDDHA)" },
+            Mn: { rango: "0.5-2", source: "Sulfato de Manganeso" },
+            Zn: { rango: "0.1-0.5", source: "Quelato de Zn o Sulfato" },
+            Cu: { rango: "0.05-0.2", source: "Sulfato de Cobre" },
+            B: { rango: "0.2-1", source: "Ácido Bórico o Bórax" },
+            Mo: { rango: "0.05-0.1", source: "Molibdato de Sodio o Amonio" }
+        }
+    },
+    vegetativa: {
+        min: 400, max: 800, ec: "1.2-2.2",
+        macroElementos: {
+            N: { ratio: 150, fertilizante: "Nitrato de Calcio (60%) + Nitrato de Potasio (40%)" },
+            P: { ratio: 40, fertilizante: "Fosfato Monoamónico o Superfosfato" },
+            K: { ratio: 150, fertilizante: "Sulfato de Potasio o Nitrato de Potasio" },
+            Ca: { ratio: 120, fertilizante: "Nitrato de Calcio (principal fuente)" },
+            Mg: { ratio: 40, fertilizante: "Sulfato de Magnesio" },
+            S: { ratio: 30, fertilizante: "Sulfato de Potasio o Magnesio" }
+        },
+        microElementos: {
+            Fe: { rango: "2-5", source: "Quelato de Fe (DTPA/EDDHA) 2-3 ppm" },
+            Mn: { rango: "0.5-2", source: "Sulfato de Manganeso 0.5 ppm" },
+            Zn: { rango: "0.1-0.5", source: "Sulfato de Zn o Quelato 0.2 ppm" },
+            Cu: { rango: "0.05-0.2", source: "Sulfato de Cu 0.1 ppm" },
+            B: { rango: "0.2-1", source: "Ácido Bórico 0.5 ppm" },
+            Mo: { rango: "0.05-0.1", source: "Molibdato 0.05 ppm" }
+        }
+    },
+    floracion: {
+        min: 800, max: 1100, ec: "2.0-2.8",
+        macroElementos: {
+            N: { ratio: 120, fertilizante: "Nitrato de Potasio (60%) + Nitrato de Calcio (40%)" },
+            P: { ratio: 60, fertilizante: "Fosfato Monoamónico o Fosfato Diamónico" },
+            K: { ratio: 180, fertilizante: "Nitrato de Potasio (principal) o Sulfato" },
+            Ca: { ratio: 100, fertilizante: "Nitrato de Calcio" },
+            Mg: { ratio: 50, fertilizante: "Sulfato de Magnesio" },
+            S: { ratio: 40, fertilizante: "Sulfato de Potasio o Magnesio" }
+        },
+        microElementos: {
+            Fe: { rango: "2-5", source: "Quelato de Fe (EDDHA preferred) 3 ppm" },
+            Mn: { rango: "0.5-2", source: "Sulfato de Manganeso 1 ppm" },
+            Zn: { rango: "0.1-0.5", source: "Quelato de Zn 0.3 ppm" },
+            Cu: { rango: "0.05-0.2", source: "Sulfato de Cobre 0.1 ppm" },
+            B: { rango: "0.2-1", source: "Ácido Bórico 0.8 ppm" },
+            Mo: { rango: "0.05-0.1", source: "Molibdato de Na 0.05 ppm" }
+        }
+    },
+    produccion: {
+        min: 1000, max: 1200, ec: "2.5-3.0",
+        macroElementos: {
+            N: { ratio: 100, fertilizante: "Nitrato de Potasio (70%) + Nitrato de Calcio (30%)" },
+            P: { ratio: 70, fertilizante: "Fosfato Monoamónico o MAP" },
+            K: { ratio: 200, fertilizante: "Nitrato de Potasio (principal)" },
+            Ca: { ratio: 100, fertilizante: "Nitrato de Calcio" },
+            Mg: { ratio: 50, fertilizante: "Sulfato de Magnesio" },
+            S: { ratio: 40, fertilizante: "Sulfato de Potasio" }
+        },
+        microElementos: {
+            Fe: { rango: "2-5", source: "Quelato de Fe EDDHA 3 ppm" },
+            Mn: { rango: "0.5-2", source: "Sulfato de Manganeso 1 ppm" },
+            Zn: { rango: "0.1-0.5", source: "Quelato de Zn 0.3 ppm" },
+            Cu: { rango: "0.05-0.2", source: "Sulfato de Cobre 0.1 ppm" },
+            B: { rango: "0.2-1", source: "Ácido Bórico 0.8 ppm" },
+            Mo: { rango: "0.05-0.1", source: "Molibdato 0.05 ppm" }
+        }
+    }
+};
+
+// Variable global para almacenar datos de nutrientes calculados
+let datosNutrientesCalculados = null;
+// Variable global para almacenar datos de automatización
+let datosAutomatizacionActual = null;
+
+function actualizarPpmRecomendada() {
+    const etapa = document.getElementById("etapaSelectNutrientes").value;
+    const datos = formulasNutrientes[etapa];
+    const recomendacion = document.getElementById("ppmRecomendada");
+    const ppmInput = document.getElementById("ppmInput");
+    
+    recomendacion.textContent = `Recomendado: ${datos.min}-${datos.max} ppm (EC: ${datos.ec})`;
+    
+    // Sugerir el valor medio del rango
+    const mediaRango = (datos.min + datos.max) / 2;
+    ppmInput.value = mediaRango;
+}
+
+function obtenerPPMDashboard() {
+    // Obtener el valor actual del TDS del elemento del Dashboard
+    const tdsElement = document.getElementById("tdsTop");
+    const ppmActual = tdsElement ? parseFloat(tdsElement.textContent) : null;
+    
+    if (!ppmActual || isNaN(ppmActual)) {
+        mostrarNotificacion('⚠️ No hay datos de TDS disponibles. Verifique que los sensores estén conectados.', 'advertencia');
+        return;
+    }
+    
+    // Actualizar el input con el valor del Dashboard
+    document.getElementById("ppmInput").value = ppmActual;
+    
+    // Actualizar el display del PPM actual
+    document.getElementById("ppmActualDashboard").textContent = ppmActual.toFixed(0);
+    
+    // Ejecutar el cálculo automáticamente
+    calcularNutrientes();
+    
+    // Feedback visual
+    const boton = event.target;
+    boton.innerHTML = '<i class="fas fa-check me-1"></i>✓ Cargado';
+    setTimeout(() => {
+        boton.innerHTML = '<i class="fas fa-sync me-1"></i>Usar Dashboard';
+    }, 2000);
+}
+
+// Actualizar el display del PPM actual cada vez que se reciben nuevos datos
+function actualizarPPMActualDisplay() {
+    const tdsElement = document.getElementById("tdsTop");
+    const displayElement = document.getElementById("ppmActualDashboard");
+    
+    if (tdsElement && displayElement) {
+        const ppmActual = tdsElement.textContent;
+        displayElement.textContent = ppmActual;
+        
+        // Aplicar color basado en valor de PPM
+        const valor = parseFloat(ppmActual);
+        const badgeContainer = displayElement.parentElement;
+        
+        if (!isNaN(valor)) {
+            // Cambiar color del badge según rango
+            if (valor > 1200) {
+                // Rojo crítico para > 1200 ppm
+                badgeContainer.classList.remove('bg-info', 'bg-success', 'bg-warning');
+                badgeContainer.classList.add('bg-danger');
+                badgeContainer.style.animation = 'pulse 1s infinite';
+            } else if (valor > 800) {
+                // Naranja para rango de floración/producción bajo
+                badgeContainer.classList.remove('bg-danger', 'bg-info', 'bg-success');
+                badgeContainer.classList.add('bg-warning');
+                badgeContainer.style.animation = 'none';
+            } else if (valor > 400) {
+                // Verde para rango vegetativo
+                badgeContainer.classList.remove('bg-danger', 'bg-warning', 'bg-info');
+                badgeContainer.classList.add('bg-success');
+                badgeContainer.style.animation = 'none';
+            } else {
+                // Azul para rango bajo
+                badgeContainer.classList.remove('bg-danger', 'bg-warning', 'bg-success');
+                badgeContainer.classList.add('bg-info');
+                badgeContainer.style.animation = 'none';
+            }
+        }
+    }
+}
+
+function calcularNutrientes() {
+    const etapa = document.getElementById("etapaSelectNutrientes").value;
+    const ppm = parseFloat(document.getElementById("ppmInput").value) || 0;
+    const datos = formulasNutrientes[etapa];
+    
+    // Reiniciar el flag de alerta para esta sesión de cálculo
+    alertaPPMYaMostrada = false;
+    
+    // NO mostrar alerta si el modo automático está activo (tiempo real)
+    if (ppm < datos.min || ppm > datos.max) {
+        if (!modoAutomaticoActivo) {
+            mostrarAlertaPPM(ppm, datos.min, datos.max, etapa);
+        }
+    }
+    
+    // Calcular macroelementos
+    let macroHTML = '';
+    for (const [elemento, info] of Object.entries(datos.macroElementos)) {
+        const dosisCalculada = ((info.ratio || 0) * ppm / 600).toFixed(2);
+        macroHTML += `
+            <tr>
+                <td><span class="badge bg-warning text-dark">${elemento}</span></td>
+                <td><strong>${dosisCalculada} ppm</strong></td>
+                <td><small>${info.fertilizante}</small></td>
+            </tr>
+        `;
+    }
+    document.getElementById("macroElementosBody").innerHTML = macroHTML;
+    
+    // Calcular microelementos
+    let microHTML = '';
+    for (const [elemento, info] of Object.entries(datos.microElementos)) {
+        const dosisMedia = ((parseFloat(info.rango.split('-')[0]) + parseFloat(info.rango.split('-')[1])) / 2).toFixed(2);
+        microHTML += `
+            <tr>
+                <td><span class="badge bg-info">${elemento}</span></td>
+                <td>${info.rango}</td>
+                <td><strong>${dosisMedia}</strong> ppm</td>
+            </tr>
+        `;
+    }
+    document.getElementById("microElementosBody").innerHTML = microHTML;
+}
+
+function calcularParaVolumen() {
+    const volumen = parseFloat(document.getElementById("volumeTanque").value) || 0;
+    const ppm = parseFloat(document.getElementById("ppmInput").value) || 0;
+    const etapa = document.getElementById("etapaSelectNutrientes").value;
+    const datos = formulasNutrientes[etapa];
+    
+    if (volumen <= 0) {
+        mostrarNotificacion('⚠️ Ingrese un volumen válido', 'advertencia');
+        return;
+    }
+    
+    // Guardar datos calculados para el PDF
+    datosNutrientesCalculados = {
+        volumen: volumen,
+        ppm: ppm,
+        etapa: etapa,
+        macroElementos: {},
+        microElementos: {}
+    };
+    
+    let resultado = `
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); color: #374151;">
+        <div class="card-body">
+            <h5 class="card-title mb-2"><i class="fas fa-calculator me-2" style="color: #6b7280;"></i>Dosis para ${volumen} L con ${ppm} ppm</h5>
+            <p class="card-text mb-0" style="color: #6b7280;"><small>Cálculo automático de nutrientes necesarios</small></p>
+        </div>
+    </div>
+    
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="background: #f9fafb; border-left: 4px solid #d1d5db;">
+                <div class="card-body" style="color: #374151;">
+                    <h6 class="card-title fw-bold mb-3" style="color: #4b5563;"><i class="fas fa-leaf me-2" style="color: #9ca3af;"></i>Macroelementos</h6>
+                    <small style="color: #6b7280;">Dosificar en orden (N > P > K > Ca > Mg > S)</small>
+                    <div class="mt-3">`;
+    
+    for (const [elemento, info] of Object.entries(datos.macroElementos)) {
+        const dosisTotal = ((info.ratio || 0) * ppm / 600 * volumen / 1000).toFixed(2); // en gramos
+        datosNutrientesCalculados.macroElementos[elemento] = { dosis: dosisTotal, fertilizante: info.fertilizante };
+        resultado += `
+        <div class="d-flex justify-content-between align-items-center mb-2 pb-2" style="border-bottom: 1px solid #e5e7eb;">
+            <div>
+                <strong style="font-size: 15px; color: #374151;">${elemento}</strong><br>
+                <small style="color: #9ca3af;">${info.fertilizante}</small>
+            </div>
+            <div class="badge" style="background: #f3f4f6; color: #6b7280; font-size: 13px; padding: 8px 12px; border: 1px solid #e5e7eb;">${dosisTotal} g</div>
+        </div>`;
+    }
+    
+    resultado += `
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="background: #f9fafb; border-left: 4px solid #d1d5db;">
+                <div class="card-body" style="color: #374151;">
+                    <h6 class="card-title fw-bold mb-3" style="color: #4b5563;"><i class="fas fa-droplet me-2" style="color: #9ca3af;"></i>Microelementos</h6>
+                    <small style="color: #6b7280;">Agregar como mezcla completa</small>
+                    <div class="mt-3">`;
+    
+    for (const [elemento, info] of Object.entries(datos.microElementos)) {
+        const dosisMedia = parseFloat(info.rango.split('-')[0]) + (parseFloat(info.rango.split('-')[1]) - parseFloat(info.rango.split('-')[0])) / 2;
+        const dosis = (dosisMedia * volumen / 1000).toFixed(3); // en gramos para micronutrientes
+        datosNutrientesCalculados.microElementos[elemento] = { dosis: dosis, source: info.source };
+        resultado += `
+        <div class="d-flex justify-content-between align-items-center mb-2 pb-2" style="border-bottom: 1px solid #e5e7eb;">
+            <div>
+                <strong style="font-size: 15px; color: #374151;">${elemento}</strong><br>
+                <small style="color: #9ca3af;">${info.source}</small>
+            </div>
+            <div class="badge" style="background: #f3f4f6; color: #6b7280; font-size: 13px; padding: 8px 12px; border: 1px solid #e5e7eb;">${dosis} g</div>
+        </div>`;
+    }
+    
+    resultado += `
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="background: #f9fafb; border-left: 4px solid #d1d5db; padding: 16px; border-radius: 8px;">
+        <div style="color: #374151; font-weight: 500;"><i class="fas fa-lightbulb me-2" style="color: #9ca3af;"></i>💡 Instrucciones:</div>
+        <ul class="mb-0 mt-2" style="color: #6b7280; font-size: 14px;">
+            <li>Disolver macroelementos en agua en secuencia: <strong>N → P → K → Ca → Mg → S</strong></li>
+            <li>Esperar 10 minutos entre cada adición</li>
+            <li>Mezclar bien y medir EC/PPM</li>
+            <li>Agregar microelementos como mezcla única</li>
+        </ul>
+    </div>`;
+    
+    document.getElementById("resultadoVolumen").innerHTML = resultado;
+}
+
+// ===== VARIABLES GLOBALES PARA ALERTAS =====
+let alertaPPMYaMostrada = false;
+let modoAutomaticoActivo = false;  // Rastrear si PPM está en modo automático/tiempo real
+
+// ===== FUNCIÓN PARA MOSTRAR ALERTA DE PPM (UNA SOLA VEZ) =====
+function mostrarAlertaPPM(ppmActual, minimo, maximo, etapa) {
+    // Si la alerta ya se mostró en esta sesión de cálculo, no mostrar nuevamente
+    if (alertaPPMYaMostrada) {
+        return;
+    }
+    
+    // Marcar que la alerta ya se mostró
+    alertaPPMYaMostrada = true;
+    
+    // Construir mensaje personalizado
+    let mensaje = `⚠️ PPM fuera de rango recomendado: ${minimo}-${maximo} ppm para etapa ${etapa}\n\n`;
+    
+    const ppmNum = parseFloat(ppmActual);
+    
+    // Mensaje específico si supera 1200 ppm (máximo recomendado para tomate)
+    if (ppmNum > 1200) {
+        mensaje += `🚨 ALERTA CRÍTICA: PPM ${ppmNum} ppm EXCEDE significativamente el máximo seguro (1200 ppm).\n\n`;
+        mensaje += `⚡ ACCIÓN INMEDIATA REQUERIDA:\n`;
+        mensaje += `1. Cambiar agua del tanque (25-30%)\n`;
+        mensaje += `2. Usar agua destilada o filtrada\n`;
+        mensaje += `3. Revisar sensores (pueden estar descalibrados)\n`;
+        mensaje += `4. Monitorar cada 1-2 horas\n\n`;
+        mensaje += `Si sigue >1500ppm, considere revisar:\n`;
+        mensaje += `- Acumulación de sales\n`;
+        mensaje += `- Evaporación (aumenta concentración)\n`;
+        mensaje += `- Fertilización excesiva anterior\n`;
+    } else if (ppmNum > maximo) {
+        mensaje += `⚠️ PPM ${ppmNum} ppm está ALTO para esta etapa.\n\n`;
+        mensaje += `Recomendación: Cambiar 15-20% del agua del tanque para reducir nutrientes.\n`;
+    } else {
+        mensaje += `PPM ${ppmNum} ppm está BAJO para esta etapa.\n\n`;
+        mensaje += `Recomendación: Agregar nutrientes siguiendo las dosificaciones recomendadas.\n`;
+    }
+    
+    // Mostrar alert simple del navegador (aparece una sola vez)
+    mostrarNotificacion(mensaje, 'advertencia', 5000);
+    
+    // Log en consola
+    console.warn(`Alerta PPM: ${minimo}-${maximo} ppm (Actual: ${ppmActual} ppm)`);
+}
+
+function getNombreElemento(el) {
+    const nombres = {
+        N: "Nitrógeno", P: "Fósforo", K: "Potasio",
+        Ca: "Calcio", Mg: "Magnesio", S: "Azufre"
+    };
+    return nombres[el] || el;
+}
+
+function getDescripcionElemento(el) {
+    const desc = {
+        N: "Crecimiento de tallos y hojas",
+        P: "Desarrollo de raíces y floración",
+        K: "Calidad de frutos y resistencia",
+        Ca: "Estructura celular y prevención de necrosis",
+        Mg: "Fotosíntesis (central en clorofila)",
+        S: "Síntesis de proteínas"
+    };
+    return desc[el] || "";
+}
+
+function getDescripcionMicroElemento(el) {
+    const desc = {
+        Fe: "Síntesis de clorofila y energía",
+        Mn: "Fotosíntesis y metabolismo",
+        Zn: "Crecimiento y resistencia",
+        Cu: "Fotosíntesis y reproducción",
+        B: "Floración y cuaje de frutos",
+        Mo: "Metabolismo del nitrógeno"
+    };
+    return desc[el] || "";
+}
+
+function getColorByElement(el) {
+    const colores = {
+        N: "#2ecc71", P: "#3498db", K: "#e74c3c",
+        Ca: "#f39c12", Mg: "#9b59b6", S: "#34495e"
+    };
+    return colores[el] || "#95a5a6";
+}
+
+function getColorByMicroElement(el) {
+    const colores = {
+        Fe: "#c0392b", Mn: "#d35400", Zn: "#16a085",
+        Cu: "#8e44ad", B: "#2980b9", Mo: "#7f8c8d"
+    };
+    return colores[el] || "#95a5a6";
+}
+
+// Inicializar con valores por defecto al cargar
+document.addEventListener("DOMContentLoaded", function() {
+    actualizarPpmRecomendada();
+    
+    // Inicializar valores del Dashboard
+    console.log('✓ Sistema de hidropónica inicializado');
+    
+    // Verificar si el toggle PPM está activo y restaurar el estado
+    const ppmAutoSwitch = document.getElementById('ppmAutoSwitch');
+    const ppmInput = document.getElementById('ppmInput');
+    
+    // Asegurar que el campo PPM esté habilitado inicialmente
+    if (ppmInput) {
+        ppmInput.disabled = false;
+        ppmInput.style.opacity = '1';
+        ppmInput.style.backgroundColor = '#ffffff';
+    }
+    
+    // ===== ACTIVAR MODO AUTOMÁTICO PPM AL INICIO =====
+    // Activar automáticamente el modo automático de PPM
+    setTimeout(() => {
+        togglePpmAuto();
+    }, 500);
+    
+    // ===== OPTIMIZACIÓN DE PESTAÑAS: Demorar renderizado =====
+    // Esto mejora significativamente el tiempo de carga inicial
+    setTimeout(() => {
+        // Las pestañas pesadas se renderizarán después de que todo esté listo
+        const lazyTabs = ['enfermedades', 'plagas', 'prevencion'];
+        lazyTabs.forEach(tabId => {
+            const tabElement = document.getElementById(`${tabId}-tab`);
+            if (tabElement) {
+                tabElement.addEventListener('show.bs.tab', function(e) {
+                    // Marcar como visitada para lazy loading posterior
+                    this.dataset.visited = 'true';
+                    console.log(`✓ Pestaña ${tabId} activada`);
+                }, { once: false });
+            }
+        });
+    }, 2000); // Esperar 2 segundos después de la carga inicial
+});
+
+// ===== CONFIGURACIÓN DE GRÁFICAS =====
+let charts = {};
+let chartData = {
+    temperature: { labels: [], waterTemp: [], dhtTemp: [] },
+    ph: { labels: [], pH: [] },
+    ec: { labels: [], EC: [], TDS: [] },
+    humidity: { labels: [], humidity: [] }
+};
+const maxDataPoints = 20;
+function initCharts() {
+    // Gráfica de Temperatura
+    const tempCtx = document.getElementById('temperatureChart')?.getContext('2d');
+    if (tempCtx) {
+        charts.temperature = new Chart(tempCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.temperature.labels,
+                datasets: [
+                    {
+                        label: 'Temp. Agua (°C)',
+                        data: chartData.temperature.waterTemp,
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#059669',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    },
+                    {
+                        label: 'Temp. Ambiente (°C)',
+                        data: chartData.temperature.dhtTemp,
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#f97316',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { weight: 'bold', size: 12 } } }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: { display: true, text: 'Temperatura (°C)' }
+                    }
+                }
+            }
+        });
+    }
+    // Gráfica de pH
+    const phCtx = document.getElementById('phChart')?.getContext('2d');
+    if (phCtx) {
+        charts.ph = new Chart(phCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.ph.labels,
+                datasets: [
+                    {
+                        label: 'pH',
+                        data: chartData.ph.pH,
+                        borderColor: '#0891b2',
+                        backgroundColor: 'rgba(8, 145, 178, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#0891b2',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { weight: 'bold', size: 12 } } }
+                },
+                scales: {
+                    y: { min: 5, max: 8 }
+                }
+            }
+        });
+    }
+    // Gráfica de EC y TDS
+    const ecCtx = document.getElementById('ecChart')?.getContext('2d');
+    if (ecCtx) {
+        charts.ec = new Chart(ecCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.ec.labels,
+                datasets: [
+                    {
+                        label: 'EC (mS/cm)',
+                        data: chartData.ec.EC,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'TDS (ppm)',
+                        data: chartData.ec.TDS,
+                        borderColor: '#7c3aed',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#7c3aed',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { weight: 'bold', size: 12 } } }
+                },
+                scales: {
+                    y: { position: 'left' },
+                    y1: { position: 'right', grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+    }
+    // Gráfica de Humedad
+    const humCtx = document.getElementById('humidityChart')?.getContext('2d');
+    if (humCtx) {
+        charts.humidity = new Chart(humCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.humidity.labels,
+                datasets: [
+                    {
+                        label: 'Humedad Relativa (%)',
+                        data: chartData.humidity.humidity,
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#06b6d4',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { weight: 'bold', size: 12 } } }
+                },
+                scales: {
+                    y: { min: 0, max: 100 }
+                }
+            }
+        });
+    }
+}
+function updateCharts(sensorData) {
+    const timestamp = new Date().toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    // Actualizar temperatura
+    if (!isNaN(sensorData.waterTemp) && !isNaN(sensorData.dhtTemp)) {
+        chartData.temperature.labels.push(timestamp);
+        chartData.temperature.waterTemp.push(parseFloat(sensorData.waterTemp));
+        chartData.temperature.dhtTemp.push(parseFloat(sensorData.dhtTemp));
+        if (chartData.temperature.labels.length > maxDataPoints) {
+            chartData.temperature.labels.shift();
+            chartData.temperature.waterTemp.shift();
+            chartData.temperature.dhtTemp.shift();
+        }
+        if (charts.temperature) {
+            charts.temperature.data.labels = chartData.temperature.labels;
+            charts.temperature.data.datasets[0].data = chartData.temperature.waterTemp;
+            charts.temperature.data.datasets[1].data = chartData.temperature.dhtTemp;
+            charts.temperature.update();
+        }
+    }
+    // Actualizar pH
+    if (!isNaN(sensorData.ph)) {
+        chartData.ph.labels.push(timestamp);
+        chartData.ph.pH.push(parseFloat(sensorData.ph));
+        if (chartData.ph.labels.length > maxDataPoints) {
+            chartData.ph.labels.shift();
+            chartData.ph.pH.shift();
+        }
+        if (charts.ph) {
+            charts.ph.data.labels = chartData.ph.labels;
+            charts.ph.data.datasets[0].data = chartData.ph.pH;
+            charts.ph.update();
+        }
+    }
+    // Actualizar EC y TDS
+    if (!isNaN(sensorData.ec) && !isNaN(sensorData.tds)) {
+        chartData.ec.labels.push(timestamp);
+        chartData.ec.EC.push(parseFloat(sensorData.ec));
+        chartData.ec.TDS.push(parseFloat(sensorData.tds));
+        if (chartData.ec.labels.length > maxDataPoints) {
+            chartData.ec.labels.shift();
+            chartData.ec.EC.shift();
+            chartData.ec.TDS.shift();
+        }
+        if (charts.ec) {
+            charts.ec.data.labels = chartData.ec.labels;
+            charts.ec.data.datasets[0].data = chartData.ec.EC;
+            charts.ec.data.datasets[1].data = chartData.ec.TDS;
+            charts.ec.update();
+        }
+    }
+    // Actualizar Humedad
+    if (!isNaN(sensorData.hum)) {
+        chartData.humidity.labels.push(timestamp);
+        chartData.humidity.humidity.push(parseFloat(sensorData.hum));
+        if (chartData.humidity.labels.length > maxDataPoints) {
+            chartData.humidity.labels.shift();
+            chartData.humidity.humidity.shift();
+        }
+        if (charts.humidity) {
+            charts.humidity.data.labels = chartData.humidity.labels;
+            charts.humidity.data.datasets[0].data = chartData.humidity.humidity;
+            charts.humidity.update();
+        }
+    }
+}
+// Inicializar gráficas cuando el documento esté listo
+// Demorar ligeramente para mejorar rendimiento inicial
+document.addEventListener('DOMContentLoaded', () => {
+    // Mostrar spinner mientras se cargan las gráficas
+    const chartElements = document.querySelectorAll('[id*="Chart"]');
+    chartElements.forEach(el => {
+        el.parentElement.style.opacity = '0.7';
+    });
+    
+    // Inicializar gráficas después de un pequeño delay (permite que todo esté renderizado)
+    setTimeout(() => {
+        initCharts();
+        chartElements.forEach(el => {
+            el.parentElement.style.opacity = '1';
+        });
+    }, 500);
+});
+// ===== CONFIGURACIÓN DE REPORTE =====
+let modalReporte;
+let datosReporte = {};
+function generarReporte() {
+    // Verificar que existan datos reales de automatización
+    if (!datosAutomatizacionActual) {
+        mostrarNotificacion('⚠️ IMPORTANTE: Debe ejecutar primero la AUTOMATIZACIÓN DE NUTRIENTES antes de generar el PDF. Haga clic en "Ejecutar Automatización".', 'advertencia', 5000);
+        return;
+    }
+    
+    const modalEl = document.getElementById('modalConfigReporte');
+    modalReporte = new bootstrap.Modal(modalEl);
+    // Limpiar formulario
+    document.getElementById('nombreResponsable').value = '';
+    document.getElementById('semestre').value = '';
+    document.getElementById('paralelo').value = '';
+    document.getElementById('observacionesTecnicas').value = '';
+    // Actualizar contadores visuales
+    document.getElementById('nombreCount').textContent = '0';
+    document.getElementById('obsCount').textContent = '0';
+    // Agregar event listeners para contadores
+    document.getElementById('nombreResponsable').addEventListener('input', function() {
+        document.getElementById('nombreCount').textContent = this.value.length;
+    });
+    document.getElementById('observacionesTecnicas').addEventListener('input', function() {
+        document.getElementById('obsCount').textContent = this.value.length;
+    });
+    modalReporte.show();
+}
+function confirmarYDescargarPDF() {
+    const nombre = document.getElementById('nombreResponsable').value.trim();
+    const semestre = document.getElementById('semestre').value.trim();
+    const paralelo = document.getElementById('paralelo').value.trim();
+    const observaciones = document.getElementById('observacionesTecnicas').value.trim();
+    let errores = [];
+    // Nombre: solo letras
+    if (!nombre || !/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\.]+$/.test(nombre)) {
+        errores.push('❌ Nombre: Solo se permiten letras (sin números)');
+        document.getElementById('nombreResponsable').classList.add('is-invalid');
+    } else {
+        document.getElementById('nombreResponsable').classList.remove('is-invalid');
+    }
+    // Semestre: SOLO 1-9
+    if (!semestre || !/^[1-9]$/.test(semestre)) {
+        errores.push('❌ Semestre: Debe ser un número del 1 al 9');
+        document.getElementById('semestre').classList.add('is-invalid');
+    } else {
+        document.getElementById('semestre').classList.remove('is-invalid');
+    }
+    // Paralelo: una sola letra
+    if (!paralelo || !/^[A-Za-z]$/.test(paralelo)) {
+        errores.push('❌ Paralelo: Debe ser una sola letra (A-Z)');
+        document.getElementById('paralelo').classList.add('is-invalid');
+    } else {
+        document.getElementById('paralelo').classList.remove('is-invalid');
+    }
+    // Observaciones: máximo 500 caracteres
+    if (observaciones.length > 500) {
+        errores.push('❌ Observaciones: Máximo 500 caracteres');
+        document.getElementById('observacionesTecnicas').classList.add('is-invalid');
+    } else {
+        document.getElementById('observacionesTecnicas').classList.remove('is-invalid');
+    }
+    if (errores.length > 0) {
+        mostrarNotificacion('⚠️ Por favor corrija los siguientes campos: ' + errores.join(', '), 'error', 5000);
+        return;
+    }
+    datosReporte = { nombre, semestre, paralelo, observaciones };
+    modalReporte?.hide();
+    generarPDFConDatos();
+}
+function generarPDFConDatos() {
+    // Verificar que existan datos reales de automatización
+    if (!datosAutomatizacionActual) {
+        mostrarNotificacion('⚠️ Debe ejecutar la AUTOMATIZACIÓN DE NUTRIENTES para generar el PDF con datos reales.', 'advertencia', 5000);
+        return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    let yPos = 10;
+    const ahora = new Date();
+    const dias = parseInt(document.getElementById("diasTomate")?.value) || 0;
+    const etapa = document.getElementById("etapaActual")?.textContent || "Vegetativa";
+    // ===== HEADER ELEGANTE =====
+    // Fondo verde
+    doc.setFillColor(5, 150, 105);
+    doc.rect(0, 0, 210, 50, 'F');
+    // Título principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.text("DIAGNÓSTICO", 105, 18, { align: "center" });
+    // Subtítulo
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text("Reporte tecnico del cultivo de tomate", 105, 28, { align: "center" });
+    // Línea decorativa verde
+    doc.setFillColor(16, 185, 129);
+    doc.rect(20, 33, 170, 2, 'F');
+    // Fecha y hora
+    doc.setFontSize(9);
+    doc.text("Generado: " + ahora.toLocaleString('es-ES'), 105, 42, { align: "center" });
+    yPos = 58;
+    doc.setTextColor(31, 41, 55);
+    // ===== SECCION 1: INFORMACION DEL RESPONSABLE =====
+    doc.setFillColor(240, 253, 244);
+    doc.rect(15, yPos - 5, 180, 6, 'F');
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(16, 185, 129);
+    doc.text(">> INFORMACION DEL RESPONSABLE", 20, yPos);
+    yPos += 12;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(31, 41, 55);
+    const infoResponsable = [
+        { label: "Responsable:", valor: datosReporte.nombre },
+        { label: "Semestre:", valor: datosReporte.semestre },
+        { label: "Paralelo:", valor: datosReporte.paralelo },
+        { label: "Fecha de Reporte:", valor: ahora.toLocaleDateString('es-ES') }
+    ];
+    infoResponsable.forEach(item => {
+        doc.setFont("helvetica", "bold");
+        doc.text(item.label, 20, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.text(String(item.valor), 60, yPos);
+        yPos += 6;
+    });
+    yPos += 4;
+    // ===== SECCION 2: DATOS DEL CULTIVO =====
+    doc.setFillColor(240, 253, 244);
+    doc.rect(15, yPos - 5, 180, 6, 'F');
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(16, 185, 129);
+    doc.text(">> DATOS DEL CULTIVO", 20, yPos);
+    yPos += 12;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(31, 41, 55);
+    const infoCultivo = [
+        { label: "Cultivo:", valor: "Tomate" },
+        { label: "Dias desde siembra:", valor: dias + " dias" },
+        { label: "Etapa actual:", valor: etapa },
+        { label: "Ciclo esperado:", valor: "120 dias" }
+    ];
+    infoCultivo.forEach(item => {
+        doc.setFont("helvetica", "bold");
+        doc.text(item.label, 20, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.text(String(item.valor), 60, yPos);
+        yPos += 6;
+    });
+    // Observaciones si existen
+    if (datosReporte.observaciones && datosReporte.observaciones.length > 0) {
+        yPos += 4;
+        doc.setFillColor(224, 242, 254);
+        doc.rect(15, yPos - 5, 180, 6, 'F');
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(2, 132, 199);
+        doc.text(">> OBSERVACIONES TECNICAS", 20, yPos);
+        yPos += 8;
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(31, 41, 55);
+        const obsLines = doc.splitTextToSize(datosReporte.observaciones, 170);
+        doc.text(obsLines, 20, yPos);
+        yPos += (obsLines.length * 4) + 4;
+    }
+    yPos += 3;
+    // ===== SECCION 3: RANGOS IDEALES SEGUN ETAPA =====
+    let rangosIdeales = {};
+    let infoEtapa = {};
+    if (dias <= 20) {
+        rangosIdeales = { ph: [5.5, 6.5], ec: [0.5, 1.5], tds: [0, 400], waterTemp: [18, 24], dhtTemp: [20, 28], hum: [60, 80] };
+        infoEtapa = { nombre: "Semilla/Plantula", desc: "Germinacion y primeras hojas" };
+    } else if (dias <= 40) {
+        rangosIdeales = { ph: [5.5, 6.5], ec: [1.2, 2.2], tds: [400, 800], waterTemp: [18, 24], dhtTemp: [20, 28], hum: [50, 70] };
+        infoEtapa = { nombre: "Vegetativa", desc: "Crecimiento y ramificacion" };
+    } else {
+        rangosIdeales = { ph: [5.8, 6.5], ec: [2.0, 3.0], tds: [800, 1200], waterTemp: [18, 24], dhtTemp: [22, 28], hum: [50, 65] };
+        infoEtapa = { nombre: "Floracion/Produccion", desc: "Flores y fructificacion" };
+    }
+    doc.setFillColor(224, 242, 254);
+    doc.rect(15, yPos - 5, 180, 6, 'F');
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(2, 132, 199);
+    doc.text(">> RANGOS IDEALES - ETAPA: " + infoEtapa.nombre, 20, yPos);
+    yPos += 6;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text(infoEtapa.desc, 20, yPos);
+    yPos += 6;
+    // ===== TABLA DE SENSORES =====
+    const leerValor = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.textContent.trim() : "--";
+    };
+    const sensores = [
+        { nombre: "pH", valor: leerValor("phTop"), unidad: "", rango: rangosIdeales.ph },
+        { nombre: "EC", valor: leerValor("ecTop"), unidad: "mS/cm", rango: rangosIdeales.ec },
+        { nombre: "TDS", valor: leerValor("tdsTop"), unidad: "ppm", rango: rangosIdeales.tds },
+        { nombre: "Temp. Agua", valor: leerValor("waterTempTop"), unidad: "C", rango: rangosIdeales.waterTemp },
+        { nombre: "Temp. Ambiente", valor: leerValor("dhtTempTop"), unidad: "C", rango: rangosIdeales.dhtTemp },
+        { nombre: "Humedad", valor: leerValor("humTop"), unidad: "%", rango: rangosIdeales.hum },
+        { nombre: "Nivel Agua", valor: leerValor("nivelTop"), unidad: "", rango: ["Normal"] }
+    ];
+    function obtenerEstadoYColor(sensor) {
+        if (sensor.valor === "--" || sensor.valor === "No disponible") {
+            return { estado: "SIN DATOS", color: [229, 231, 235], textColor: [107, 114, 128] };
+        }
+        if (sensor.nombre === "Nivel Agua") {
+            return sensor.valor === "Normal"
+                ? { estado: "[OK]", color: [209, 250, 229], textColor: [5, 46, 22] }
+                : { estado: "[!] RELLENAR", color: [254, 243, 224], textColor: [120, 53, 15] };
+        }
+        const num = parseFloat(sensor.valor);
+        const [min, max] = sensor.rango;
+        if (!isNaN(num) && !isNaN(min) && !isNaN(max)) {
+            if (num >= min && num <= max)
+                return { estado: "[OK]", color: [209, 250, 229], textColor: [5, 46, 22] };
+            else if (num < min)
+                return { estado: "[v] BAJO", color: [219, 234, 254], textColor: [7, 29, 73] };
+            else
+                return { estado: "[^] ALTO", color: [219, 234, 254], textColor: [7, 29, 73] };
+        }
+        return { estado: "SIN DATOS", color: [229, 231, 235], textColor: [107, 114, 128] };
+    }
+    doc.autoTable({
+        startY: yPos + 2,
+        head: [['Parametro', 'Valor Actual', 'Rango Ideal', 'Estado']],
+        body: sensores.map(s => {
+            const { estado, color } = obtenerEstadoYColor(s);
+            return [
+                { content: s.nombre, styles: { fontStyle: "bold", textColor: [31, 41, 55] } },
+                { content: s.valor + (s.unidad ? " " + s.unidad : ""), styles: { textColor: [31, 41, 55] } },
+                { content: (s.nombre === "Nivel Agua") ? s.rango[0] : s.rango[0] + " - " + s.rango[1] + (s.unidad ? " " + s.unidad : ""), styles: { textColor: [107, 114, 128] } },
+                { content: estado, styles: { fillColor: color, textColor: [31, 41, 55], fontStyle: "bold" } }
+            ];
+        }),
+        theme: 'striped',
+        headStyles: {
+            fillColor: [5, 150, 105],
+            textColor: [255, 255, 255],
+            fontSize: 10,
+            fontStyle: 'bold'
+        },
+        bodyStyles: { fontSize: 9, textColor: [31, 41, 55] },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
+        columnStyles: {
+            0: { cellWidth: 40 },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 50 },
+            3: { cellWidth: 35, halign: 'center' }
+        },
+        margin: { left: 15, right: 15 }
+    });
+    
+    // ===== RECOMENDACIONES SEGUN ESTADO (DESPUÉS DE LA TABLA DE SENSORES) =====
+    yPos = doc.lastAutoTable.finalY + 8;
+    const tieneAlertas = sensores.some(s => {
+        const { estado } = obtenerEstadoYColor(s);
+        return estado.includes("BAJO") || estado.includes("ALTO") || estado.includes("RELLENAR");
+    });
+    if (tieneAlertas) {
+        doc.setFillColor(224, 242, 254);
+        doc.rect(15, yPos - 5, 180, 6, 'F');
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(2, 132, 199);
+        doc.text(">> ACCIONES RECOMENDADAS", 20, yPos);
+        yPos += 8;
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(31, 41, 55);
+        const recomendaciones = [];
+        sensores.forEach(s => {
+            const { estado } = obtenerEstadoYColor(s);
+            if (estado.includes("BAJO")) {
+                recomendaciones.push("* " + s.nombre + ": Aumentar (valor bajo)");
+            } else if (estado.includes("ALTO")) {
+                recomendaciones.push("* " + s.nombre + ": Disminuir (valor alto)");
+            } else if (estado.includes("RELLENAR")) {
+                recomendaciones.push("* Rellenar tanque de agua inmediatamente");
+            }
+        });
+        if (recomendaciones.length > 0) {
+            const recLines = doc.splitTextToSize(recomendaciones.join('\n'), 170);
+            doc.text(recLines, 20, yPos);
+        }
+    }
+    
+    // ===== SECCION 4: DOSIS DE SOLUCIÓN NUTRITIVA (PÁGINA DEDICADA) =====
+    // Crear una nueva página para esta sección
+    doc.addPage();
+    
+    // ===== HEADER CONSISTENTE =====
+    doc.setFillColor(5, 150, 105);
+    doc.rect(0, 0, 210, 50, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.text("FORMULACIÓN", 105, 18, { align: "center" });
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text("Dosis de nutrientes para el cultivo", 105, 28, { align: "center" });
+    
+    // Línea decorativa verde
+    doc.setFillColor(16, 185, 129);
+    doc.rect(20, 33, 170, 2, 'F');
+    
+    // Fecha y hora
+    doc.setFontSize(9);
+    doc.text("Generado: " + ahora.toLocaleString('es-ES'), 105, 42, { align: "center" });
+    
+    yPos = 58;
+    doc.setTextColor(31, 41, 55);
+    
+    if (datosNutrientesCalculados) {
+        doc.setFillColor(219, 234, 254);
+        doc.rect(15, yPos - 5, 180, 6, 'F');
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(7, 89, 133);
+        doc.text(">> DOSIS DE NUTRIENTES - VOLUMEN: " + datosNutrientesCalculados.volumen + " L", 20, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(31, 41, 55);
+        
+        // Información general
+        const ppmTexto = "PPM: " + datosNutrientesCalculados.ppm + " ppm";
+        doc.text(ppmTexto, 20, yPos);
+        yPos += 5;
+        
+        // Tabla de macroelementos
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(217, 119, 6);
+        doc.text("Macroelementos:", 20, yPos);
+        yPos += 4;
+        
+        const macroTableData = [];
+        for (const [elemento, info] of Object.entries(datosNutrientesCalculados.macroElementos)) {
+            macroTableData.push([
+                elemento,
+                info.dosis + " g",
+                info.fertilizante
+            ]);
+        }
+        
+        doc.autoTable({
+            startY: yPos,
+            head: [['Elemento', 'Dosis', 'Fertilizante']],
+            body: macroTableData,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [2, 132, 199],
+                textColor: [255, 255, 255],
+                fontSize: 9,
+                fontStyle: 'bold'
+            },
+            bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+            columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 35 },
+                2: { cellWidth: 115 }
+            },
+            margin: { left: 15, right: 15 }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 4;
+        
+        // Tabla de microelementos
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(5, 150, 105);
+        doc.text("Microelementos:", 20, yPos);
+        yPos += 4;
+        
+        const microTableData = [];
+        for (const [elemento, info] of Object.entries(datosNutrientesCalculados.microElementos)) {
+            microTableData.push([
+                elemento,
+                info.dosis + " g",
+                info.source
+            ]);
+        }
+        
+        doc.autoTable({
+            startY: yPos,
+            head: [['Elemento', 'Dosis', 'Fuente']],
+            body: microTableData,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [2, 132, 199],
+                textColor: [255, 255, 255],
+                fontSize: 9,
+                fontStyle: 'bold'
+            },
+            bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+            columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 35 },
+                2: { cellWidth: 115 }
+            },
+            margin: { left: 15, right: 15 }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 8;
+    }
+    
+    // ===== SECCION 6: RESULTADO DE AUTOMATIZACIÓN (SI EXISTE) =====
+    if (datosAutomatizacionActual) {
+        // Nueva página para resultados de automatización
+        doc.addPage();
+        let yPosAuto = 10;
+        
+        // ===== HEADER CONSISTENTE =====
+        doc.setFillColor(5, 150, 105);
+        doc.rect(0, 0, 210, 50, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont("helvetica", "bold");
+        doc.text("NUTRIENTES IDEALES", 105, 18, { align: "center" });
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.text("Recomendaciones de ajuste de nutrientes", 105, 28, { align: "center" });
+        
+        // Línea decorativa verde
+        doc.setFillColor(16, 185, 129);
+        doc.rect(20, 33, 170, 2, 'F');
+        
+        // Fecha y hora
+        doc.setFontSize(9);
+        doc.text("Generado: " + datosAutomatizacionActual.timestamp, 105, 42, { align: "center" });
+        
+        yPosAuto = 58;
+        doc.setTextColor(31, 41, 55);
+        
+        // ===== ESTADO Y ACCION =====
+        doc.setFillColor(240, 253, 244);
+        doc.rect(15, yPosAuto - 5, 180, 6, 'F');
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(16, 185, 129);
+        doc.text(">> ESTADO DEL SISTEMA", 20, yPosAuto);
+        yPosAuto += 10;
+        
+        // Determinar color según estado
+        let colorEstado = [16, 185, 129];
+        let estadoTexto = datosAutomatizacionActual.estado.replace(/[🔴🟢]/g, '').trim();
+        if (datosAutomatizacionActual.estado.includes('🔴')) {
+            colorEstado = [220, 38, 38];
+        }
+        
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...colorEstado);
+        doc.setFontSize(12);
+        doc.text(estadoTexto, 20, yPosAuto);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(31, 41, 55);
+        doc.setFontSize(10);
+        doc.text("Acción: " + datosAutomatizacionActual.accion, 20, yPosAuto + 7);
+        
+        yPosAuto += 18;
+        
+        // Procesar TODOS los detalles y extraer información para tablas
+        const detallesProcesados = datosAutomatizacionActual.detalles.map(d => {
+            return d
+                .replace(/<br>/g, '\n')
+                .replace(/<strong[^>]*>/g, '')
+                .replace(/<\/strong>/g, '')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/<[^>]*>/g, '');
+        });
+        
+        // Agrupar información en arrays para las tablas
+        let infoGeneral = [];
+        let macroElementos = [];
+        let microElementos = [];
+        let instrucciones = [];
+        let cambioAgua = [];
+        
+        let seccionActual = null;
+        let macroAgregada = false;
+        let microAgregada = false;
+        
+        for (let i = 0; i < detallesProcesados.length; i++) {
+            const detalle = detallesProcesados[i].trim();
+            
+            if (!detalle) continue;
+            
+            // Detectar secciones y agregar encabezados
+            if (detalle.includes('DOSIS') && detalle.includes('MACROELEMENTOS')) {
+                seccionActual = 'MACRO';
+                if (!macroAgregada) {
+                    macroElementos.push('DOSIS DE MACROELEMENTOS A AGREGAR:');
+                    macroAgregada = true;
+                }
+                continue;
+            } else if (detalle.includes('MICROELEMENTOS') && (detalle.includes('dosis') || detalle.includes('recomendada'))) {
+                seccionActual = 'MICRO';
+                if (!microAgregada) {
+                    microElementos.push('MICROELEMENTOS (dosis recomendada):');
+                    microAgregada = true;
+                }
+                continue;
+            } else if (detalle.includes('INSTRUCCIONES')) {
+                seccionActual = 'INSTR';
+                continue;
+            } else if (detalle.includes('CAMBIO')) {
+                seccionActual = 'CAMBIO';
+                continue;
+            } else if (detalle.includes('PPM') && detalle.includes('Actual')) {
+                seccionActual = 'GENERAL';
+            }
+            
+            // Agrupar datos según sección
+            if (seccionActual === 'GENERAL' && (detalle.includes('PPM') || detalle.includes('Falta') || detalle.includes('Total'))) {
+                infoGeneral.push(detalle);
+            } else if (seccionActual === 'MACRO') {
+                // Captura líneas con formato: • N: 45.5 g (...) o Ca: 2.50 g (...) 
+                // Más flexible para capturar todos los elementos incluyendo Ca y Mg
+                if (detalle.length > 0 && /^[•\s]*[A-Z][a-z]?:\s*/.test(detalle)) {
+                    const cleaned = detalle.replace(/^[•\s]+/, '').trim();
+                    macroElementos.push(cleaned);
+                }
+            } else if (seccionActual === 'MICRO') {
+                // Captura líneas con formato: • B: 0.5 g (...) o Fe: 0.350 g (...)
+                if (detalle.length > 0 && /^[•\s]*[A-Z][a-z]?:\s*/.test(detalle)) {
+                    const cleaned = detalle.replace(/^[•\s]+/, '').trim();
+                    microElementos.push(cleaned);
+                }
+            } else if (seccionActual === 'INSTR' && detalle.match(/^\d+\./)) {
+                instrucciones.push(detalle);
+            } else if (seccionActual === 'CAMBIO') {
+                cambioAgua.push(detalle);
+            } else if (!seccionActual || seccionActual === 'GENERAL') {
+                infoGeneral.push(detalle);
+            }
+        }
+        
+        // ===== TABLA INFORMACIÓN GENERAL =====
+        if (infoGeneral.length > 0) {
+            doc.setFillColor(240, 253, 244);
+            doc.rect(15, yPosAuto - 5, 180, 6, 'F');
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(16, 185, 129);
+            doc.text(">> INFORMACIÓN GENERAL", 20, yPosAuto);
+            yPosAuto += 8;
+            
+            let generalRows = [];
+            infoGeneral.forEach(det => {
+                const parts = det.split(':');
+                if (parts.length >= 2) {
+                    generalRows.push([parts[0].trim(), parts.slice(1).join(':').trim()]);
+                }
+            });
+            
+            if (generalRows.length > 0) {
+                doc.autoTable({
+                    startY: yPosAuto,
+                    head: [['Parámetro', 'Valor']],
+                    body: generalRows,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [16, 185, 129],
+                        textColor: [255, 255, 255],
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+                    columnStyles: {
+                        0: { cellWidth: 80 },
+                        1: { cellWidth: 100 }
+                    },
+                    margin: { left: 15, right: 15 }
+                });
+                yPosAuto = doc.lastAutoTable.finalY + 6;
+            }
+        }
+        
+        // ===== TABLA MACROELEMENTOS =====
+        if (macroElementos.length > 0) {
+            if (yPosAuto > 240) {
+                doc.addPage();
+                yPosAuto = 20;
+            }
+            
+            doc.setFillColor(224, 242, 254);
+            doc.rect(15, yPosAuto - 5, 180, 6, 'F');
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(2, 132, 199);
+            doc.text(">> MACROELEMENTOS A AGREGAR", 20, yPosAuto);
+            yPosAuto += 8;
+            
+            let macroRows = [];
+            
+            macroElementos.forEach(det => {
+                // Intenta coincidir con el formato: N: 3.00 g (Nitrato...) o Ca: 2.50 g (...)
+                const eleMatch = det.match(/^([A-Z][a-z]?):\s*(.+?)\s*\((.+)\)$/);
+                if (eleMatch) {
+                    const elemento = eleMatch[1];
+                    const dosis = eleMatch[2].trim();
+                    const fuente = eleMatch[3].trim();
+                    macroRows.push([elemento, dosis, fuente]);
+                } else if (det.includes('DOSIS')) {
+                    // Ignorar el encabezado descriptivo, no agregarlo a la tabla
+                    return;
+                } else if (det.includes('Total')) {
+                    // Línea de total
+                    macroRows.push([det, '', '']);
+                } else {
+                    // Formato fallback
+                    const parts = det.split(':');
+                    if (parts.length >= 2) {
+                        macroRows.push([parts[0].trim(), parts.slice(1).join(':').trim(), '']);
+                    }
+                }
+            });
+            
+            if (macroRows.length > 0) {
+                doc.autoTable({
+                    startY: yPosAuto,
+                    head: [['Elemento', 'Dosis', 'Fertilizante']],
+                    body: macroRows,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [217, 119, 6],
+                        textColor: [255, 255, 255],
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+                    columnStyles: {
+                        0: { cellWidth: 35 },
+                        1: { cellWidth: 40 },
+                        2: { cellWidth: 105 }
+                    },
+                    margin: { left: 15, right: 15 }
+                });
+                yPosAuto = doc.lastAutoTable.finalY + 6;
+            }
+        }
+        
+        // ===== TABLA MICROELEMENTOS =====
+        if (microElementos.length > 0) {
+            if (yPosAuto > 240) {
+                doc.addPage();
+                yPosAuto = 20;
+            }
+            
+            doc.setFillColor(219, 234, 254);
+            doc.rect(15, yPosAuto - 5, 180, 6, 'F');
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(7, 89, 133);
+            doc.text(">> MICROELEMENTOS", 20, yPosAuto);
+            yPosAuto += 8;
+            
+            let microRows = [];
+            
+            microElementos.forEach(det => {
+                // Intenta coincidir con el formato: Fe: 0.350 g (Quelato de Fe...) o B: 0.060 g (...)
+                const eleMatch = det.match(/^([A-Z][a-z]?):\s*(.+?)\s*\((.+)\)$/);
+                if (eleMatch) {
+                    const elemento = eleMatch[1];
+                    const dosis = eleMatch[2].trim();
+                    const fuente = eleMatch[3].trim();
+                    microRows.push([elemento, dosis, fuente]);
+                } else if (det.includes('MICROELEMENTOS')) {
+                    // Ignorar el encabezado descriptivo, no agregarlo a la tabla
+                    return;
+                } else {
+                    // Formato fallback
+                    const parts = det.split(':');
+                    if (parts.length >= 2) {
+                        microRows.push([parts[0].trim(), parts.slice(1).join(':').trim(), '']);
+                    }
+                }
+            });
+            
+            if (microRows.length > 0) {
+                doc.autoTable({
+                    startY: yPosAuto,
+                    head: [['Elemento', 'Rango/Dosis', 'Fuente']],
+                    body: microRows,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [7, 89, 133],
+                        textColor: [255, 255, 255],
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+                    columnStyles: {
+                        0: { cellWidth: 35 },
+                        1: { cellWidth: 40 },
+                        2: { cellWidth: 105 }
+                    },
+                    margin: { left: 15, right: 15 }
+                });
+                yPosAuto = doc.lastAutoTable.finalY + 6;
+            }
+        }
+        
+        // ===== TABLA CAMBIO DE AGUA =====
+        if (cambioAgua.length > 0) {
+            if (yPosAuto > 240) {
+                doc.addPage();
+                yPosAuto = 20;
+            }
+            
+            doc.setFillColor(219, 234, 254);
+            doc.rect(15, yPosAuto - 5, 180, 6, 'F');
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(7, 29, 73);
+            doc.text(">> CAMBIO DE AGUA REQUERIDO", 20, yPosAuto);
+            yPosAuto += 8;
+            
+            let cambioRows = [];
+            cambioAgua.forEach(det => {
+                const parts = det.split(':');
+                if (parts.length >= 2) {
+                    cambioRows.push([parts[0].trim(), parts.slice(1).join(':').trim()]);
+                }
+            });
+            
+            if (cambioRows.length > 0) {
+                doc.autoTable({
+                    startY: yPosAuto,
+                    head: [['Parámetro', 'Valor']],
+                    body: cambioRows,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [220, 38, 38],
+                        textColor: [255, 255, 255],
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+                    columnStyles: {
+                        0: { cellWidth: 80 },
+                        1: { cellWidth: 100 }
+                    },
+                    margin: { left: 15, right: 15 }
+                });
+                yPosAuto = doc.lastAutoTable.finalY + 6;
+            }
+        }
+        
+        // ===== TABLA INSTRUCCIONES =====
+        if (instrucciones.length > 0) {
+            if (yPosAuto > 240) {
+                doc.addPage();
+                yPosAuto = 20;
+            }
+            
+            doc.setFillColor(255, 247, 237);
+            doc.rect(15, yPosAuto - 5, 180, 6, 'F');
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(217, 119, 6);
+            doc.text(">> INSTRUCCIONES PASO A PASO", 20, yPosAuto);
+            yPosAuto += 8;
+            
+            let instrRows = [];
+            instrucciones.forEach(det => {
+                instrRows.push([det]);
+            });
+            
+            if (instrRows.length > 0) {
+                doc.autoTable({
+                    startY: yPosAuto,
+                    head: [['Pasos']],
+                    body: instrRows,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [247, 144, 9],
+                        textColor: [255, 255, 255],
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: { fontSize: 8, textColor: [31, 41, 55], halign: 'left' },
+                    columnStyles: {
+                        0: { cellWidth: 170 }
+                    },
+                    margin: { left: 15, right: 15 }
+                });
+                yPosAuto = doc.lastAutoTable.finalY + 6;
+            }
+        }
+        
+        // ADVERTENCIA si existe
+        if (datosAutomatizacionActual.advertencia) {
+            if (yPosAuto > 235) {
+                doc.addPage();
+                yPosAuto = 20;
+            }
+            
+            yPosAuto += 5;
+            doc.setFillColor(254, 243, 224);
+            doc.rect(15, yPosAuto - 5, 180, 6, 'F');
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(217, 119, 6);
+            doc.text(">> ADVERTENCIA IMPORTANTE", 20, yPosAuto);
+            yPosAuto += 8;
+            
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(31, 41, 55);
+            
+            const advTextoLimpio = datosAutomatizacionActual.advertencia.replace(/⚠️\s*/g, '');
+            const advLineas = doc.splitTextToSize(advTextoLimpio, 170);
+            doc.text(advLineas, 20, yPosAuto);
+        }
+    }
+    
+    // ===== FOOTER (APLICAR A TODAS LAS PÁGINAS INCLUYENDO LA DE AUTOMATIZACIÓN) =====
+    const pageCount = doc.internal.pages.length - 1;
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        // Linea separadora
+        doc.setDrawColor(220, 38, 38);
+        doc.setLineWidth(0.5);
+        doc.line(15, 285, 195, 285);
+        // Texto del pie
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.setFont("helvetica", "normal");
+        doc.text("Sistema IoT Agropecuario | Cultivo Hidroponico de Tomate", 105, 290, { align: "center" });
+        doc.text("Pagina " + i + " de " + pageCount, 105, 295, { align: "center" });
+    }
+    
+    // ===== GUARDAR PDF =====
+    const nombreArchivo = "Reporte_Hidroponico_" + datosReporte.nombre.replace(/\s+/g, '_') + "_" + ahora.toISOString().slice(0,10) + ".pdf";
+    doc.save(nombreArchivo);
+}
+// === FUNCIONES ORIGINALES DEL DASHBOARD ===
+function crearTabla(id, columnas, filas){
+    return `
+    <div class="box">
+    <div class="header-box">
+    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>${getSensorName(id)}</h5>
+    <div class="d-flex align-items-end gap-2">
+    <span id="${id}Status" class="status me-3">--</span>
+    <span id="${id}Value" class="value">--</span>
+    </div>
+    </div>
+    <table class="table table-hover text-center" id="${id}Table">
+    <thead class="table-light">
+    <tr>${columnas.map(c=>`<th>${c}</th>`).join("")}</tr>
+    </thead>
+    <tbody>
+    ${filas.map(f=>`
+    <tr data-min="${f.min}" data-max="${f.max}">
+    ${f.cols.map(c=>`<td>${c}</td>`).join("")}
+    </tr>
+    `).join("")}
+    </tbody>
+    </table>
+    </div>`;
+}
+
+// ===== FUNCIÓN PARA MOSTRAR NOTIFICACIONES CENTRADAS =====
+function mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
+    // Crear elemento de notificación
+    const notif = document.createElement('div');
+    notif.className = `notificacion ${tipo}`;
+    notif.textContent = mensaje;
+    
+    // Agregar al body
+    document.body.appendChild(notif);
+    
+    // Auto-cerrar después de la duración especificada
+    setTimeout(() => {
+        notif.classList.add('cerrar');
+        setTimeout(() => {
+            notif.remove();
+        }, 300);
+    }, duracion);
+    
+    // Permitir cerrar con clic
+    notif.addEventListener('click', () => {
+        notif.classList.add('cerrar');
+        setTimeout(() => {
+            notif.remove();
+        }, 300);
+    });
+}
+
+function getSensorName(id) {
+    const names = {
+    "nivel": "Nivel de Agua",
+    "ph": "Nivel de pH",
+    "ec": "Conductividad Eléctrica (EC)",
+    "tds": "Sólidos Disueltos Totales (TDS)",
+    "waterTemp": "Temperatura del Agua",
+    "dhtTemp": "Temperatura Ambiente",
+    "hum": "Humedad Relativa"
+    };
+    return names[id] || id;
+}
+function validarDias(input) {
+    input.value = input.value.replace(/\D/g, '');
+    input.value = input.value.replace(/^0+(?=\d)/, '');
+    let valor = parseInt(input.value);
+    if (isNaN(valor)) {
+        input.value = '';
+        return;
+    }
+    if (valor > 120) {
+        input.value = 120;
+    }
+    actualizarDiagnostico();
+    sincronizarEtapaNutrientes(valor);
+}
+
+function validarPPM(input) {
+    // Solo permitir números positivos
+    input.value = input.value.replace(/[^\d]/g, '');
+    
+    // Limitar a máximo 4 dígitos (máx 1200)
+    if (input.value.length > 4) {
+        input.value = input.value.substring(0, 4);
+    }
+    
+    let valor = input.value;
+    
+    // Si está vacío, no hacer nada
+    if (valor === '') {
+        return;
+    }
+    
+    // Convertir a número
+    let numValor = parseInt(valor);
+    
+    // Si es negativo o cero, vaciar
+    if (numValor <= 0) {
+        input.value = '';
+        return;
+    }
+    
+    // Limitar a máximo 1200 ppm
+    if (numValor > 1200) {
+        input.value = 1200;
+        console.warn('⚠️ PPM limitado a máximo 1200 ppm');
+    } else {
+        input.value = numValor;
+    }
+    
+    // Actualizar el badge del dashboard
+    const badgeElement = document.getElementById('ppmActualDashboard');
+    if (badgeElement) {
+        badgeElement.textContent = numValor;
+    }
+}
+
+function validarVolumen(input) {
+    // Solo permitir números positivos
+    input.value = input.value.replace(/[^\d]/g, '');
+    
+    let valor = input.value;
+    
+    // Si está vacío, no hacer nada
+    if (valor === '') {
+        return;
+    }
+    
+    // Convertir a número
+    let numValor = parseInt(valor);
+    
+    // Si es negativo o cero, establecer a 1
+    if (numValor <= 0) {
+        input.value = 1;
+        return;
+    }
+    
+    // Limitar a máximo 100 L
+    if (numValor > 100) {
+        input.value = 100;
+        console.warn('⚠️ Volumen limitado a máximo 100 L');
+    } else {
+        input.value = numValor;
+    }
+}
+
+function sincronizarEtapaNutrientes(dias) {
+    let etapaCorrespondiente;
+    
+    if (dias <= 20) {
+        etapaCorrespondiente = "plantula";
+    } else if (dias <= 40) {
+        etapaCorrespondiente = "vegetativa";
+    } else if (dias <= 70) {
+        etapaCorrespondiente = "floracion";
+    } else {
+        etapaCorrespondiente = "produccion";
+    }
+    
+    // Actualizar el selector de etapa en la calculadora
+    const etapaSelect = document.getElementById("etapaSelectNutrientes");
+    if (etapaSelect) {
+        etapaSelect.value = etapaCorrespondiente;
+        actualizarPpmRecomendada();
+    }
+}
+
+// ===== FUNCIÓN PARA TOGGLE PPM AUTOMÁTICO =====
+function togglePpmAuto() {
+    const btn = document.getElementById('ppmAutoBtn');
+    const ppmInput = document.getElementById('ppmInput');
+    const statusBadge = document.getElementById('ppmStatusBadge');
+    
+    // Alternar estado del botón
+    const isActive = btn.classList.toggle('active');
+    
+    if (isActive) {
+        // ACTIVAR MODO AUTOMÁTICO
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        modoAutomaticoActivo = true;
+        ppmInput.disabled = true;
+        ppmInput.style.opacity = '0.7';
+        ppmInput.style.backgroundColor = '#f3f4f6';
+        ppmInput.style.cursor = 'not-allowed';
+        
+        // Mostrar badge de estado
+        statusBadge.style.display = 'inline-block';
+        
+        // Obtener valor inmediato del Dashboard
+        console.log('✓ Obteniendo datos del Dashboard...');
+        actualizarPPMDelDashboard();
+        
+        // Configurar actualización automática cada 2 segundos
+        if (!window.ppmAutoInterval) {
+            window.ppmAutoInterval = setInterval(() => {
+                actualizarPPMDelDashboard();
+            }, 2000);
+        }
+        
+        console.log('✓ PPM en modo Automático (actualizando cada 2 segundos - ALERTAS DESACTIVADAS)');
+    } else {
+        // DESACTIVAR MODO AUTOMÁTICO
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-secondary');
+        modoAutomaticoActivo = false;
+        ppmInput.disabled = false;
+        ppmInput.style.opacity = '1';
+        ppmInput.style.backgroundColor = '#ffffff';
+        ppmInput.style.cursor = 'text';
+        
+        // Ocultar badge de estado
+        statusBadge.style.display = 'none';
+        
+        // Detener actualización automática
+        if (window.ppmAutoInterval) {
+            clearInterval(window.ppmAutoInterval);
+            window.ppmAutoInterval = null;
+        }
+        
+        console.log('✓ PPM en modo Manual');
+    }
+}
+
+// ===== FUNCIÓN PARA OBTENER PPM DEL DASHBOARD =====
+function actualizarPPMDelDashboard() {
+    const tdsElement = document.getElementById("tdsTop");
+    
+    if (!tdsElement) {
+        console.warn('⚠️ Elemento tdsTop no encontrado en el DOM');
+        return false;
+    }
+    
+    const textoTDS = tdsElement.textContent.trim();
+    const ppmActual = parseFloat(textoTDS);
+    
+    if (isNaN(ppmActual) || ppmActual === null || ppmActual === 0) {
+        console.warn(`⚠️ No hay datos válidos de TDS/PPM. Valor: "${textoTDS}"`);
+        return false;
+    }
+    
+    // Actualizar el campo PPM input
+    const ppmInput = document.getElementById('ppmInput');
+    const valorAnterior = ppmInput.value;
+    ppmInput.value = ppmActual;
+    
+    // Actualizar el badge del Dashboard
+    const badgeElement = document.getElementById('ppmActualDashboard');
+    badgeElement.textContent = ppmActual.toFixed(0);
+    
+    // Log de cambios
+    if (valorAnterior !== ppmActual.toString()) {
+        console.log(`✓ PPM actualizado: ${valorAnterior} → ${ppmActual.toFixed(0)} ppm`);
+    }
+    
+    // Ejecutar cálculo de nutrientes automáticamente
+    calcularNutrientes();
+    
+    return true;
+}
+
+function calcularCompleto() {
+    // Ejecutar diagnóstico
+    actualizarDiagnostico();
+    
+    // Calcular nutrientes
+    calcularNutrientes();
+    
+    // Calcular dosis para el volumen
+    calcularParaVolumen();
+    
+    // Habilitar botón de PDF después de calcular
+    const btnPDF = document.getElementById('btnGenerarReporte');
+    if (btnPDF && datosNutrientesCalculados) {
+        btnPDF.disabled = false;
+        btnPDF.style.opacity = '1';
+        btnPDF.style.cursor = 'pointer';
+    }
+    
+    // Ejecutar automáticamente Automatizar Nutrientes
+    automatizarAjustePPM();
+}
+
+const contenido = document.getElementById("contenido");
+function agregarBloque(id, columnas, filas){
+    contenido.innerHTML += crearTabla(id, columnas, filas);
+}
+// Las tablas por sensor se han eliminado para evitar redundancia
+// La información se mostraba tanto en los sensores principales como en estos cuadros detallados
+function actualizarTabla(valor, id){
+    const filas = document.querySelectorAll(`#${id}Table tbody tr`);
+    const status = document.getElementById(`${id}Status`);
+    const value = document.getElementById(`${id}Value`);
+    if (!status || !value) return;
+    if (id === "nivel") {
+        if (isNaN(valor)) {
+            value.textContent = "--";
+        } else {
+            value.textContent = valor === 0 ? "Normal" : "Bajo";
+        }
+    } else {
+        value.textContent = isNaN(valor) ? "--" : valor.toFixed(2);
+    }
+    filas.forEach(f => {
+        f.classList.remove("highlight");
+        const min = parseFloat(f.dataset.min);
+        const max = parseFloat(f.dataset.max);
+        if (!isNaN(valor) && valor >= min && valor < max) {
+            f.classList.add("highlight");
+            status.textContent = f.cells[1].textContent;
+            status.style.marginBottom = "8px";
+            value.style.marginTop = "5px";
+            status.className = "status";
+            if (id === "ph" && valor >= 5.5 && valor <= 6.5) status.style.background = "linear-gradient(90deg, #e8f5e9, #c8e6c9)";
+            else if (id === "ec" && valor >= 1 && valor <= 3.5) status.style.background = "linear-gradient(90deg, #e8f5e9, #c8e6c9)";
+            else if (id === "tds" && valor >= 400 && valor <= 1100) status.style.background = "linear-gradient(90deg, #e8f5e9, #c8e6c9)";
+            else if ((id === "waterTemp" || id === "dhtTemp") && valor >= 15 && valor <= 30) status.style.background = "linear-gradient(90deg, #e8f5e9, #c8e6c9)";
+            else if (id === "hum" && valor >= 40 && valor <= 70) status.style.background = "linear-gradient(90deg, #e8f5e9, #c8e6c9)";
+            else if (id === "nivel" && valor < 1) status.style.background = "linear-gradient(90deg, #e8f5e9, #c8e6c9)";
+            else status.style.background = "linear-gradient(90deg, #ffebee, #ffcdd2)";
+        }
+    });
+    actualizarDiagnostico();
+}
+const diasInput = document.getElementById("diasTomate");
+const etapaElement = document.getElementById("etapaActual");
+let ultimaEtapa = "Vegetativa";
+diasInput.addEventListener("input", () => {
+    const dias = parseInt(diasInput.value) || 0;
+    if (dias <= 20) {
+        etapaElement.textContent = "Semilla/Plántula";
+        etapaElement.className = "text-primary fw-bold";
+        ultimaEtapa = "Semilla/Plántula";
+    } else if (dias <= 40) {
+        etapaElement.textContent = "Vegetativa";
+        etapaElement.className = "text-success fw-bold";
+        ultimaEtapa = "Vegetativa";
+    } else {
+        etapaElement.textContent = "Floración/Producción";
+        etapaElement.className = "text-danger fw-bold";
+        ultimaEtapa = "Floración/Producción";
+    }
+    actualizarDiagnostico();
+});
+function actualizarDiagnostico(){
+    const phText = document.getElementById("phTop").textContent;
+    const ecText = document.getElementById("ecTop").textContent;
+    const tdsText = document.getElementById("tdsTop").textContent;
+    const waterTempText = document.getElementById("waterTempTop").textContent;
+    const dhtTempText = document.getElementById("dhtTempTop").textContent;
+    const humText = document.getElementById("humTop").textContent;
+    const ph = phText !== "--" ? parseFloat(phText) : NaN;
+    const ec = ecText !== "--" ? parseFloat(ecText) : NaN;
+    const tds = tdsText !== "--" ? parseFloat(tdsText) : NaN;
+    const waterTemp = waterTempText !== "--" ? parseFloat(waterTempText) : NaN;
+    const dhtTemp = dhtTempText !== "--" ? parseFloat(dhtTempText) : NaN;
+    const hum = humText !== "--" ? parseFloat(humText) : NaN;
+    const nivelText = document.getElementById("nivelTop").textContent;
+    let nivel;
+    if (nivelText === "Bajo") {
+        nivel = 0;
+    } else if (nivelText === "Normal") {
+        nivel = 1;
+    } else {
+        nivel = NaN;
+    }
+    const dias = parseInt(diasInput.value) || 0;
+    let etapa = "";
+    let rangoIdeal = {};
+    if (dias <= 20) {
+        etapa = "Etapa semilla/plántula";
+        rangoIdeal = {
+            tds: [0, 400],
+            ph: [5.5, 6.5],
+            ec: [0.5, 1.5],
+            waterTemp: [18, 24],
+            dhtTemp: [20, 28],
+            hum: [60, 80],
+            nivel: [0, 0]
+        };
+    } else if (dias <= 40) {
+        etapa = "Etapa vegetativa";
+        rangoIdeal = {
+            tds: [400, 800],
+            ph: [5.5, 6.5],
+            ec: [1.2, 2.2],
+            waterTemp: [18, 24],
+            dhtTemp: [20, 28],
+            hum: [50, 70],
+            nivel: [0, 0]
+        };
+    } else {
+        etapa = "Etapa floración/producción";
+        rangoIdeal = {
+            tds: [800, 1200],
+            ph: [5.8, 6.5],
+            ec: [2.0, 3.0],
+            waterTemp: [18, 24],
+            dhtTemp: [22, 28],
+            hum: [50, 65],
+            nivel: [0, 0]
+        };
+    }
+    if (etapa !== ultimaEtapa) {
+        etapaElement.textContent = etapa.replace("Etapa ", "");
+        if (etapa.includes("semilla")) {
+            etapaElement.className = "text-primary fw-bold";
+        } else if (etapa.includes("vegetativa")) {
+            etapaElement.className = "text-success fw-bold";
+        } else {
+            etapaElement.className = "text-danger fw-bold";
+        }
+        ultimaEtapa = etapa;
+    }
+    function generarFila(param, valor, rango, unidad = ""){
+        if (isNaN(valor)) {
+            return {
+                param,
+                ideal: `${rango[0]} – ${rango[1]} ${unidad}`,
+                valor: "No disponible",
+                accion: "Esperando datos",
+                highlight: false,
+                claseAccion: "text-muted"
+            };
+        }
+        let accion = "Correcto";
+        let claseAccion = "correcto";
+        if (valor < rango[0]) {
+            accion = `↑ Incrementar`;
+            claseAccion = "alerta";
+        } else if (valor > rango[1]) {
+            accion = `↓ Reducir`;
+            claseAccion = "alerta";
+        }
+        const highlight = (valor >= rango[0] && valor <= rango[1]);
+        const valorFormateado = valor.toFixed(1) + (unidad ? " " + unidad : "");
+        return {
+            param,
+            ideal: `${rango[0]} – ${rango[1]}${unidad ? " " + unidad : ""}`,
+            valor: valorFormateado,
+            accion,
+            highlight,
+            claseAccion
+        };
+    }
+    const filas = [];
+    filas.push(generarFila("TDS", tds, rangoIdeal.tds, "ppm"));
+    filas.push(generarFila("pH", ph, rangoIdeal.ph));
+    filas.push(generarFila("EC", ec, rangoIdeal.ec, "mS/cm"));
+    filas.push(generarFila("Temp. Agua", waterTemp, rangoIdeal.waterTemp, "°C"));
+    filas.push(generarFila("Temp. Ambiente", dhtTemp, rangoIdeal.dhtTemp, "°C"));
+    filas.push(generarFila("Humedad", hum, rangoIdeal.hum, "%"));
+    if (!isNaN(nivel)) {
+        let textoValor = nivel === 1 ? "Normal" : "Bajo";
+        let accion = nivel === 1 ? "Correcto" : "Rellenar tanque";
+        let clase = nivel === 1 ? "correcto" : "alerta";
+        filas.push({
+            param: "Nivel Agua",
+            ideal: "16 cm",
+            valor: textoValor,
+            accion: accion,
+            highlight: nivel === 1,
+            claseAccion: clase
+        });
+    } else {
+        filas.push({
+            param: "Nivel Agua",
+            ideal: "14 cm",
+            valor: "No disponible",
+            accion: "Esperando datos",
+            highlight: nivel === 0,
+            claseAccion: "text-muted"
+        });
+    }
+    const hayDatosValidos = filas.some(fila => fila.valor !== "No disponible" && fila.valor !== "--");
+    if (!hayDatosValidos) {
+        document.getElementById("diagnostico").innerHTML = `
+        <div class="data-loading">
+        <i class="fas fa-satellite-dish"></i>
+        <p>Esperando datos de los sensores para generar diagnóstico...</p>
+        <small class="text-muted">Verifique la conexión con los sensores y Firebase</small>
+        </div>
+        `;
+        return;
+    }
+    let tablaHTML = `
+    <div class="table-responsive">
+    <table class="table table-bordered table-hover text-center">
+    <thead class="table-light">
+    <tr>
+    <th>Parámetro</th>
+    <th>Rango Ideal</th>
+    <th>Valor Actual</th>
+    <th>Acción Recomendada</th>
+    </tr>
+    </thead>
+    <tbody>
+    ${filas.map(f => `
+    <tr class="${f.highlight ? 'highlight' : ''}">
+    <td><strong>${f.param}</strong></td>
+    <td>${f.ideal}</td>
+    <td>${f.valor}</td>
+    <td class="${f.claseAccion}">${f.accion}</td>
+    </tr>
+    `).join("")}
+    </tbody>
+    </table>
+    `;
+    document.getElementById("diagnostico").innerHTML = `
+    <div class="alert alert-primary text-center">
+    <h5><i class="fas fa-leaf me-2"></i>${etapa} (${dias} días)</h5>
+    </div>
+    ${tablaHTML}
+    `;
+}
+// ===== FUNCIÓN DE AUTOMATIZACIÓN DE NUTRIENTES (PPM) =====
+function automatizarAjustePPM() {
+    const ppmActual = parseFloat(document.getElementById("ppmActualDashboard").textContent) || 0;
+    const etapa = document.getElementById("etapaSelectNutrientes").value;
+    const volumen = parseFloat(document.getElementById("volumeTanque").value) || 100;
+    const datos = formulasNutrientes[etapa];
+    
+    if (ppmActual === 0 || isNaN(ppmActual)) {
+        mostrarNotificacion('⚠️ No hay datos de PPM disponibles. Conecte los sensores primero.', 'advertencia');
+        return;
+    }
+    
+    const ppmMin = datos.min;
+    const ppmMax = datos.max;
+    const ppmIdeal = (ppmMin + ppmMax) / 2;
+    
+    let recomendacion = {
+        estado: '',
+        accion: '',
+        detalles: [],
+        advertencia: ''
+    };
+    
+    // CASO 1: PPM BAJO - AGREGAR NUTRIENTES
+    if (ppmActual < ppmMin) {
+        const ppmFaltante = ppmMin - ppmActual;
+        const porcentajeFaltante = (ppmFaltante / ppmActual * 100).toFixed(1);
+        
+        recomendacion.estado = '🔴 NUTRIENTES BAJOS';
+        recomendacion.accion = 'AGREGAR NUTRIENTES';
+        
+        // Calcular dosificación de macroelementos
+        recomendacion.detalles.push(`<strong>PPM Actual:</strong> ${ppmActual} ppm`);
+        recomendacion.detalles.push(`<strong>PPM Ideal:</strong> ${ppmMin}-${ppmMax} ppm`);
+        recomendacion.detalles.push(`<strong>Falta:</strong> ${ppmFaltante.toFixed(0)} ppm (${porcentajeFaltante}%)`);
+        recomendacion.detalles.push(`<br><strong style="color: #059669;">📊 DOSIS DE MACROELEMENTOS A AGREGAR:</strong>`);
+        
+        let dosisTotal = 0;
+        for (const [elemento, info] of Object.entries(datos.macroElementos)) {
+            const dosis = ((info.ratio || 0) * ppmFaltante / 600 * volumen / 1000).toFixed(2);
+            dosisTotal += parseFloat(dosis);
+            recomendacion.detalles.push(`&nbsp;&nbsp;• <strong>${elemento}:</strong> ${dosis} g (${info.fertilizante})`);
+        }
+        
+        recomendacion.detalles.push(`<strong style="color: #059669;">Total Macroelementos:</strong> ${dosisTotal.toFixed(2)} g`);
+        recomendacion.detalles.push(`<br><strong style="color: #0891b2;">💊 MICROELEMENTOS (dosis recomendada):</strong>`);
+        
+        for (const [elemento, info] of Object.entries(datos.microElementos)) {
+            const dosisMedia = parseFloat(info.rango.split('-')[0]) + (parseFloat(info.rango.split('-')[1]) - parseFloat(info.rango.split('-')[0])) / 2;
+            const dosis = (dosisMedia * volumen / 1000).toFixed(3);
+            recomendacion.detalles.push(`&nbsp;&nbsp;• <strong>${elemento}:</strong> ${dosis} g (${info.source})`);
+        }
+        
+        recomendacion.detalles.push(`<br><strong style="color: #ea580c;">⚡ INSTRUCCIONES:</strong>`);
+        recomendacion.detalles.push(`1. Disolver los macroelementos en agua en orden: N > P > K > Ca > Mg > S`);
+        recomendacion.detalles.push(`2. Esperar 10 minutos entre cada adición`);
+        recomendacion.detalles.push(`3. Mezclar bien y medir EC/PPM`);
+        recomendacion.detalles.push(`4. Agregar microelementos solo si es necesario`);
+        recomendacion.advertencia = `⚠️ Máximo agregar 200 ppm en una sola dosis. Si necesita más, hacerlo en 2-3 dosis con 1 hora de diferencia.`;
+        
+    } 
+    // CASO 2: PPM ALTO - BAJAR NUTRIENTES CON CAMBIO DE AGUA
+    else if (ppmActual > ppmMax) {
+        const ppmExceso = ppmActual - ppmMax;
+        const porcentajeExceso = (ppmExceso / ppmActual * 100).toFixed(1);
+        
+        // Fórmula: si quiero bajar de X ppm a Y ppm, debo cambiar (X-Y)/X del agua
+        const porcentajeCambio = ((ppmActual - ppmIdeal) / ppmActual * 100).toFixed(1);
+        const volumenCambiar = (volumen * porcentajeCambio / 100).toFixed(2);
+        
+        recomendacion.estado = '🔴 NUTRIENTES ALTOS';
+        recomendacion.accion = 'CAMBIO PARCIAL DE AGUA';
+        
+        recomendacion.detalles.push(`<strong>PPM Actual:</strong> ${ppmActual} ppm`);
+        recomendacion.detalles.push(`<strong>PPM Ideal:</strong> ${ppmMin}-${ppmMax} ppm`);
+        recomendacion.detalles.push(`<strong>Exceso:</strong> ${ppmExceso.toFixed(0)} ppm (${porcentajeExceso}%)`);
+        recomendacion.detalles.push(`<br><strong style="color: #059669;">💧 CAMBIO DE AGUA REQUERIDO:</strong>`);
+        recomendacion.detalles.push(`<strong style="font-size: 1.2em; color: #059669;">Cambiar ${volumenCambiar} L de ${volumen} L (${porcentajeCambio}%)</strong>`);
+        recomendacion.detalles.push(`<strong style="color: #059669;">PPM esperado después:</strong> ${ppmIdeal.toFixed(0)} ppm`);
+        
+        recomendacion.detalles.push(`<br><strong style="color: #ea580c;">⚡ INSTRUCCIONES:</strong>`);
+        recomendacion.detalles.push(`1. Desconéctela del suministro eléctrico`);
+        recomendacion.detalles.push(`2. Drenar exactamente ${volumenCambiar} L del tanque`);
+        recomendacion.detalles.push(`3. Llenar con agua fresca (sin nutrientes agregados)`);
+        recomendacion.detalles.push(`4. A los 5 minutos, medir EC/PPM para verificar`);
+        recomendacion.detalles.push(`5. Si sigue alto, repetir el procedimiento`);
+        recomendacion.advertencia = `⚠️ Cambios muy grandes pueden estresarlas plantas. Si necesita reducir >50%, hacerlo en 2 cambios de ${(volumenCambiar/2).toFixed(2)} L con 2 horas de diferencia.`;
+        
+    } 
+    // CASO 3: PPM DENTRO DEL RANGO IDEAL
+    else {
+        recomendacion.estado = '🟢 NUTRIENTES IDEALES';
+        recomendacion.accion = 'SIN ACCIÓN REQUERIDA';
+        
+        recomendacion.detalles.push(`<strong>PPM Actual:</strong> ${ppmActual} ppm ✓`);
+        recomendacion.detalles.push(`<strong>Rango Ideal:</strong> ${ppmMin}-${ppmMax} ppm`);
+        recomendacion.detalles.push(`<strong>Estado:</strong> En perfecto equilibrio`);
+        recomendacion.detalles.push(`<br>✅ El Prototipo está funcionando correctamente. `);
+        recomendacion.detalles.push(`Continúe monitoreando cada 2-4 horas.`);
+    }
+    
+    // Mostrar resultados en modal
+    mostrarResultadoAutomatizacion(recomendacion);
+}
+
+function mostrarResultadoAutomatizacion(recomendacion) {
+    // Guardar datos de automatización globalmente para el PDF
+    datosAutomatizacionActual = {
+        estado: recomendacion.estado,
+        accion: recomendacion.accion,
+        detalles: recomendacion.detalles,
+        advertencia: recomendacion.advertencia,
+        timestamp: new Date().toLocaleString('es-ES')
+    };
+    
+    // Llenar contenido
+    const colores = {
+        '🟢': '#10b981',
+        '🔴': '#059669',
+        '🟡': '#f59e0b'
+    };
+    
+    let color = '#10b981';
+    if (recomendacion.estado.includes('🔴')) color = '#059669';
+    
+    let contenido = `
+        <div style="border-left: 5px solid ${color}; padding: 15px; margin-bottom: 20px; background-color: rgba(0,0,0,0.02); border-radius: 5px;">
+            <h5 style="color: ${color}; margin: 0; font-weight: bold;">${recomendacion.estado}</h5>
+            <p style="margin: 10px 0 0 0; font-size: 1.1em; font-weight: 600; color: var(--primary-color);">${recomendacion.accion}</p>
+        </div>
+        
+        <div style="background: #f0f9ff; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            ${recomendacion.detalles.map(d => `<p style="margin: 8px 0; line-height: 1.6;">${d}</p>`).join('')}
+        </div>
+    `;
+    
+    if (recomendacion.advertencia) {
+        contenido += `
+            <div style="background: #fffbeb; border: 2px solid #fbbf24; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <p style="margin: 0; color: #b45309; font-size: 0.95em;">${recomendacion.advertencia}</p>
+            </div>
+        `;
+    }
+    
+    // Agregar botón de copiar
+    contenido += `
+        <div class="mt-3">
+            <button class="btn btn-success btn-sm w-100" onclick="copiarRecomendacion()">
+                <i class="fas fa-copy me-2"></i>Copiar Recomendación
+            </button>
+        </div>
+    `;
+    
+    // Mostrar en la pestaña
+    document.getElementById('resultadoAutomatizacion').innerHTML = contenido;
+    
+    // Cambiar a la pestaña de automatización
+    const automatizacionTab = new bootstrap.Tab(document.getElementById('automatizacion-tab'));
+    automatizacionTab.show();
+    
+    // Guardar para copiar
+    window.textoRecomendacion = recomendacion.detalles.join('\n');
+}
+
+function copiarRecomendacion() {
+    if (window.textoRecomendacion) {
+        navigator.clipboard.writeText(window.textoRecomendacion).then(() => {
+            mostrarNotificacion('✓ Recomendación copiada al portapapeles', 'exito');
+        }).catch(() => {
+            mostrarNotificacion('Error al copiar. Intente de nuevo.', 'error');
+        });
+    }
+}
+
+// Activar pestañas por URL hash
+document.addEventListener('DOMContentLoaded', function() {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#')) {
+        const tabTrigger = document.querySelector(`[data-bs-target="${hash}"]`);
+        if (tabTrigger) {
+            const tab = new bootstrap.Tab(tabTrigger);
+            tab.show();
+        }
+    }
+    const tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabElements.forEach(tabEl => {
+        tabEl.addEventListener('shown.bs.tab', function (event) {
+            const target = event.target.getAttribute('data-bs-target');
+            if (history.replaceState) {
+                history.replaceState(null, null, target);
+            }
+        });
+    });
+});
+</script>
+<!-- Firebase y bibliotecas -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+const firebaseConfig = {
+    apiKey: "AIzaSyBXAal12oFlxKZ81PlaDNnar_y2-DiZRlU",
+    authDomain: "esp32-a7ac9.firebaseapp.com",
+    databaseURL: "https://esp32-a7ac9-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "esp32-a7ac9",
+    storageBucket: "esp32-a7ac9.firebasestorage.app",
+    messagingSenderId: "312730525959",
+    appId: "1:312730525959:web:dae44f28a4149dcee165a2"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const sensoresRef = ref(db, "sensores");
+const connectionStatus = document.getElementById("connectionStatus");
+let primeraCarga = true;
+onValue(sensoresRef, (snapshot) => {
+    const d = snapshot.val();
+    if (!d) {
+        connectionStatus.className = "alert alert-warning text-center mb-0";
+        connectionStatus.innerHTML = "<i class='fas fa-exclamation-triangle me-2'></i>No hay datos disponibles en la base de datos";
+        return;
+    }
+    connectionStatus.className = "alert alert-success text-center mb-0";
+    connectionStatus.innerHTML = "<i class='fas fa-check-circle me-2'></i>Conectado";
+    function actualizarValor(elementId, valor, decimales = 2) {
+        const elemento = document.getElementById(elementId);
+        if (elemento && !isNaN(valor)) {
+            elemento.textContent = valor.toFixed(decimales);
+        }
+    }
+    if (!isNaN(parseFloat(d.nivel))) {
+        const valorNivel = parseFloat(d.nivel);
+        const textoNivel = valorNivel === 0 ? "Normal" : "Bajo";
+        document.getElementById("nivelTop").textContent = textoNivel;
+    }
+    if (!isNaN(parseFloat(d.ph))) actualizarValor("phTop", parseFloat(d.ph), 2);
+    if (!isNaN(parseFloat(d.ec))) actualizarValor("ecTop", parseFloat(d.ec), 2);
+    if (!isNaN(parseFloat(d.tds))) actualizarValor("tdsTop", parseFloat(d.tds), 0);
+    // Actualizar display del PPM actual en la sección de nutrientes
+    if (!isNaN(parseFloat(d.tds))) {
+        const displayElement = document.getElementById("ppmActualDashboard");
+        if (displayElement) {
+            displayElement.textContent = parseFloat(d.tds).toFixed(0);
+        }
+    }
+    if (!isNaN(parseFloat(d.waterTemp))) actualizarValor("waterTempTop", parseFloat(d.waterTemp), 1);
+    if (!isNaN(parseFloat(d.dhtTemp))) actualizarValor("dhtTempTop", parseFloat(d.dhtTemp), 1);
+    if (!isNaN(parseFloat(d.hum))) actualizarValor("humTop", parseFloat(d.hum), 1);
+    // Tablas detalladas eliminadas para evitar redundancia de información
+    // Actualizar gráficas
+    updateCharts({
+        waterTemp: parseFloat(d.waterTemp),
+        dhtTemp: parseFloat(d.dhtTemp),
+        ph: parseFloat(d.ph),
+        ec: parseFloat(d.ec),
+        tds: parseFloat(d.tds),
+        hum: parseFloat(d.hum)
+    });
+    
+    // ✅ CORRECCIÓN: Actualizar diagnóstico CADA VEZ que lleguen datos nuevos
+    actualizarDiagnostico();
+    
+}, (error) => {
+    console.error("Error de Firebase:", error);
+    connectionStatus.className = "alert alert-danger text-center mb-0";
+    connectionStatus.innerHTML = `<i class='fas fa-exclamation-circle me-2'></i>Error de conexión: ${error.message || "No se pudo conectar con Firebase"}`;
+    document.getElementById("diagnostico").innerHTML = `
+    <div class="data-error">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    Error al conectar con la base de datos. Verifique su conexión a internet y la configuración de Firebase.
+    </div>
+    `;
+});
+// Se elimina la llamada inicial aquí para evitar duplicidad, ya que onValue se dispara al cargar
+// actualizarDiagnostico(); 
+</script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jsPDF library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<!-- Chart.js library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- ===== PWA: Registro del Service Worker ===== -->
+<script>
+// Registrar el Service Worker para PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then((registration) => {
+                console.log('✓ Service Worker registrado correctamente:', registration);
+                
+                // Verificar si hay actualizaciones disponibles
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Nueva versión disponible
+                            console.log('✓ Nueva versión disponible. Actualizar la página para obtenerla.');
+                            
+                            // Mostrar notificación al usuario
+                            if ('Notification' in window && Notification.permission === 'granted') {
+                                new Notification('Actualización disponible', {
+                                    body: 'Una nueva versión de la aplicación está disponible. Recarga la página para actualizar.',
+                                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect fill="%23dc2626" width="192" height="192"/><text x="50%" y="50%" font-size="80" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">H</text></svg>'
+                                });
+                            }
+                        }
+                    });
+                });
+            })
+            .catch((error) => {
+                console.warn('✗ Error al registrar Service Worker:', error);
+            });
+    });
+    
+    // Actualizar automáticamente cada hora
+    setInterval(() => {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            registrations.forEach((registration) => {
+                registration.update();
+            });
+        });
+    }, 60 * 60 * 1000);
+}
+
+// Permitir notificaciones push (opcional)
+if ('Notification' in window && Notification.permission === 'default') {
+    // No pedir automáticamente, solo si el usuario lo solicita
+    console.log('Las notificaciones están disponibles');
+}
+
+// Detectar cuando vuelve conexión después de estar offline
+window.addEventListener('online', () => {
+    console.log('✓ Conexión restaurada');
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success alert-dismissible fade show position-fixed bottom-0 start-0 m-3';
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+        <i class="fas fa-wifi me-2"></i>
+        <strong>Conexión Restaurada</strong> - Los datos se están sincronizando
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    // Remover después de 5 segundos
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+});
+
+// Detectar cuando se pierde conexión
+window.addEventListener('offline', () => {
+    console.warn('⚠️ Sin conexión a internet');
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-warning alert-dismissible fade show position-fixed bottom-0 start-0 m-3';
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Sin Conexión a Internet</strong> - Usando datos en caché
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+});
+
+// Ofrecer instalar aplicación (solo en navegadores compatibles)
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Mostrar botón de instalar
+    const btnInstalar = document.getElementById('btnInstalarPWA');
+    if (btnInstalar) {
+        btnInstalar.style.display = 'block';
+        btnInstalar.addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✓ Aplicación instalada');
+                        btnInstalar.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+    }
+});
+
+// Detectar cuando la aplicación se instala
+window.addEventListener('appinstalled', () => {
+    console.log('✓ Aplicación instalada con éxito');
+    const btnInstalar = document.getElementById('btnInstalarPWA');
+    if (btnInstalar) {
+        btnInstalar.style.display = 'none';
+    }
+});
+</script>
+
+</body>
+</html>
