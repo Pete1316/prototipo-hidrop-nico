@@ -3375,7 +3375,6 @@ function automatizarAjustePPM() {
         recomendacion.detalles.push(`<strong>PPM Actual:</strong> ${ppmActual} ppm ✓`);
         recomendacion.detalles.push(`<strong>Rango Ideal:</strong> ${ppmMin}-${ppmMax} ppm`);
         recomendacion.detalles.push(`<strong>Estado:</strong> En perfecto equilibrio`);
-        recomendacion.detalles.push(`<br>✅ El Prototipo está funcionando correctamente. `);
         recomendacion.detalles.push(`Continúe monitoreando cada 2-4 horas.`);
     }
     
@@ -3384,7 +3383,7 @@ function automatizarAjustePPM() {
 }
 
 function mostrarResultadoAutomatizacion(recomendacion) {
-    // Guardar datos de automatización globalmente para el PDF
+    // Guardar datos de automatización globalmente para el PDF (LÓGICA INTACTA)
     datosAutomatizacionActual = {
         estado: recomendacion.estado,
         accion: recomendacion.accion,
@@ -3392,63 +3391,200 @@ function mostrarResultadoAutomatizacion(recomendacion) {
         advertencia: recomendacion.advertencia,
         timestamp: new Date().toLocaleString('es-ES')
     };
-    
-    // Llenar contenido
-    const colores = {
-        '🟢': '#10b981',
-        '🔴': '#059669',
-        '🟡': '#f59e0b'
+
+    // Colores según estado (LÓGICA INTACTA)
+    const colores = { '🟢': '#10b981', '🔴': '#059669', '🟡': '#f59e0b' };
+    let color = recomendacion.estado.includes('🔴') ? '#059669' : '#10b981';
+
+    // Parsear detalles para organizar en tablas
+    const detallesLimpios = recomendacion.detalles.map(d => 
+        d.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+    );
+
+    // Categorizar información
+    const secciones = {
+        general: [],
+        macro: [],
+        micro: [],
+        instrucciones: [],
+        cambioAgua: [],
+        advertencia: recomendacion.advertencia
     };
-    let color = '#10b981';
-    if (recomendacion.estado.includes('🔴')) color = '#059669';
+
+    let categoriaActual = 'general';
     
+    detallesLimpios.forEach(linea => {
+        if (!linea) return;
+        
+        // Detectar categorías por palabras clave
+        if (linea.includes('MACROELEMENTOS')) { categoriaActual = 'macro'; return; }
+        if (linea.includes('MICROELEMENTOS')) { categoriaActual = 'micro'; return; }
+        if (linea.includes('INSTRUCCIONES')) { categoriaActual = 'instrucciones'; return; }
+        if (linea.includes('CAMBIO DE AGUA')) { categoriaActual = 'cambioAgua'; return; }
+        
+        // Clasificar líneas según patrón
+        if (categoriaActual === 'general' && (linea.includes('PPM') || linea.includes('Falta:') || linea.includes('Exceso:'))) {
+            secciones.general.push(linea);
+        } else if (categoriaActual === 'macro' && /^[•\s]*[A-Z][a-z]?:/.test(linea)) {
+            secciones.macro.push(linea.replace(/^[•\s]+/, ''));
+        } else if (categoriaActual === 'micro' && /^[•\s]*[A-Z][a-z]?:/.test(linea)) {
+            secciones.micro.push(linea.replace(/^[•\s]+/, ''));
+        } else if (categoriaActual === 'instrucciones' && /^\d+\./.test(linea)) {
+            secciones.instrucciones.push(linea);
+        } else if (categoriaActual === 'cambioAgua') {
+            secciones.cambioAgua.push(linea);
+        } else if (categoriaActual === 'general') {
+            secciones.general.push(linea);
+        }
+    });
+
+    // Generar HTML con tablas organizadas
     let contenido = `
-    <div style="border-left: 5px solid ${color}; padding: 15px; margin-bottom: 20px; background-color: rgba(0,0,0,0.02); border-radius: 5px;">
-        <h5 style="color: ${color}; margin: 0; font-weight: bold;">${recomendacion.estado}</h5>
-        <p style="margin: 10px 0 0 0; font-size: 1.1em; font-weight: 600; color: var(--primary-color);">${recomendacion.accion}</p>
-    </div>
-    <div style="background: #f0f9ff; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-        ${recomendacion.detalles.map(d => `<p style="margin: 8px 0; line-height: 1.6;">${d}</p>`).join('')}
-    </div>
-    `;
-    
-    if (recomendacion.advertencia) {
+    <!-- HEADER DE ESTADO -->
+    <div class="glass-card p-4 mb-4" style="border-left: 5px solid ${color};">
+        <h5 class="fw-bold mb-2" style="color: ${color};">
+            <i class="fas fa-circle-info me-2"></i>${recomendacion.estado.replace(/[🔴🟢]/g, '')}
+        </h5>
+        <p class="mb-0 fw-semibold text-primary">${recomendacion.accion}</p>
+    </div>`;
+
+    // TABLA: INFORMACIÓN GENERAL
+    if (secciones.general.length > 0) {
         contenido += `
-        <div style="background: #fffbeb; border: 2px solid #fbbf24; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-            <p style="margin: 0; color: #b45309; font-size: 0.95em;">${recomendacion.advertencia}</p>
-        </div>
-        `;
+        <div class="glass-card p-4 mb-4">
+            <h6 class="fw-bold mb-3 text-hidro-blue"><i class="fas fa-chart-pie me-2"></i>Información General</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <tbody>
+                        ${secciones.general.map(item => {
+                            const [label, valor] = item.split(':').map(s => s?.trim());
+                            return `<tr><td class="fw-medium" style="width: 40%">${label}:</td><td>${valor || item}</td></tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
     }
-    
-    // Agregar botón de copiar
+
+    // TABLA: MACROELEMENTOS
+    if (secciones.macro.length > 0) {
+        contenido += `
+        <div class="glass-card p-4 mb-4">
+            <h6 class="fw-bold mb-3 text-warning"><i class="fas fa-arrow-up me-2"></i>Macroelementos a Agregar</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0">
+                    <thead class="table-light">
+                        <tr><th>Elemento</th><th>Dosis</th><th>Fertilizante</th></tr>
+                    </thead>
+                    <tbody>
+                        ${secciones.macro.map(item => {
+                            const match = item.match(/^([A-Z][a-z]?):\s*(.+?)\s*\((.+)\)$/);
+                            if (match) {
+                                return `<tr>
+                                    <td><span class="badge bg-warning text-dark">${match[1]}</span></td>
+                                    <td class="fw-bold">${match[2]}</td>
+                                    <td><small class="text-muted">${match[3]}</small></td>
+                                </tr>`;
+                            }
+                            return `<tr><td colspan="3">${item}</td></tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    // TABLA: MICROELEMENTOS
+    if (secciones.micro.length > 0) {
+        contenido += `
+        <div class="glass-card p-4 mb-4">
+            <h6 class="fw-bold mb-3 text-info"><i class="fas fa-arrow-down me-2"></i>Microelementos</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0">
+                    <thead class="table-light">
+                        <tr><th>Elemento</th><th>Dosis</th><th>Fuente</th></tr>
+                    </thead>
+                    <tbody>
+                        ${secciones.micro.map(item => {
+                            const match = item.match(/^([A-Z][a-z]?):\s*(.+?)\s*\((.+)\)$/);
+                            if (match) {
+                                return `<tr>
+                                    <td><span class="badge bg-info text-white">${match[1]}</span></td>
+                                    <td class="fw-bold">${match[2]}</td>
+                                    <td><small class="text-muted">${match[3]}</small></td>
+                                </tr>`;
+                            }
+                            return `<tr><td colspan="3">${item}</td></tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    // TABLA: CAMBIO DE AGUA (si aplica)
+    if (secciones.cambioAgua.length > 0) {
+        contenido += `
+        <div class="glass-card p-4 mb-4 border-danger">
+            <h6 class="fw-bold mb-3 text-danger"><i class="fas fa-droplet me-2"></i>Cambio de Agua Requerido</h6>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        ${secciones.cambioAgua.map(item => {
+                            const [label, valor] = item.split(':').map(s => s?.trim());
+                            return `<tr class="${label?.includes('Cambiar') ? 'table-danger' : ''}">
+                                <td class="fw-medium">${label}:</td><td>${valor || item}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    // LISTA: INSTRUCCIONES
+    if (secciones.instrucciones.length > 0) {
+        contenido += `
+        <div class="glass-card p-4 mb-4">
+            <h6 class="fw-bold mb-3 text-hidro-orange"><i class="fas fa-list-check me-2"></i>Instrucciones Paso a Paso</h6>
+            <ol class="list-group list-group-numbered">
+                ${secciones.instrucciones.map(inst => 
+                    `<li class="list-group-item border-0 px-0 py-1">${inst.replace(/^\d+\.\s*/, '')}</li>`
+                ).join('')}
+            </ol>
+        </div>`;
+    }
+
+    // ADVERTENCIA (si existe)
+    if (secciones.advertencia) {
+        contenido += `
+        <div class="alert alert-warning border-warning d-flex align-items-start" role="alert">
+            <i class="fas fa-triangle-exclamation me-3 mt-1 fs-5"></i>
+            <div>
+                <strong class="d-block mb-1">Advertencia Importante</strong>
+                <small>${secciones.advertencia.replace(/⚠️\s*/, '')}</small>
+            </div>
+        </div>`;
+    }
+
+    // BOTÓN COPIAR
     contenido += `
-    <div class="mt-3">
-        <button class="btn btn-success btn-sm w-100" onclick="copiarRecomendacion()">
-            <i class="fas fa-copy me-2"></i>Copiar Recomendación
+    <div class="text-center mt-4">
+        <button class="btn btn-success btn-lg w-100" onclick="copiarRecomendacion()">
+            <i class="fas fa-copy me-2"></i>Copiar Recomendación al Portapapeles
         </button>
-    </div>
-    `;
-    
-    // Mostrar en la pestaña
+    </div>`;
+
+    // Insertar en el DOM (LÓGICA INTACTA)
     document.getElementById('resultadoAutomatizacion').innerHTML = contenido;
-    
-    // ===== CORRECCIÓN: Verificar estado del botón Auto antes de cambiar pestaña =====
+
+    // Navegación de pestañas según estado del botón Auto (LÓGICA INTACTA)
     const btnAuto = document.getElementById('ppmAutoBtn');
-    const isActive = btnAuto.classList.contains('active');
-    
-    if (isActive) {
-        // Modo Auto ACTIVADO → Ir a Nutrientes (automatización)
-        const nutrientesTab = new bootstrap.Tab(document.getElementById('automatizacion-tab'));
-        nutrientesTab.show();
-        console.log('✓ Auto ACTIVO: Navegando a Nutrientes');
-    } else {
-        // Modo Auto DESACTIVADO → Ir a Formulación (NO cambiar a Nutrientes)
-        const formulacionTab = new bootstrap.Tab(document.getElementById('dosis-tab'));
-        formulacionTab.show();
-        console.log('✓ Auto INACTIVO: Navegando a Formulación');
-    }
-    
-    // Guardar para copiar
+    const targetTab = btnAuto.classList.contains('active') ? 'automatizacion-tab' : 'dosis-tab';
+    const tab = new bootstrap.Tab(document.getElementById(targetTab));
+    tab.show();
+
+    // Guardar para copiar (LÓGICA INTACTA)
     window.textoRecomendacion = recomendacion.detalles.join('\n');
 }
 
@@ -3681,3 +3817,4 @@ window.addEventListener('appinstalled', () => {
 
 </body>
 </html>
+
