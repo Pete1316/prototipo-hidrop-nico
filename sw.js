@@ -1,129 +1,153 @@
-// Service Worker para PWA - Offline Support
-const CACHE_NAME = 'sistema-hidroponico-v1';
+const CACHE_NAME = 'hidro-pwa-v1';
+const BASE_PATH = '/prototipo-hidrop-nico/';
+
 const urlsToCache = [
-  '/sistema-hidroponico/',
-  '/sistema-hidroponico/index.html',
-  '/sistema-hidroponico/manifest.json',
-  '/sistema-hidroponico/src/estilo.css',
-  '/sistema-hidroponico/src/script.js'
+  BASE_PATH,
+  BASE_PATH + 'index.html',
+  BASE_PATH + 'manifest.json',
+  BASE_PATH + 'src/estilo.css',
+  BASE_PATH + 'src/script.js',
+  // Add CDN resources you want cached for offline
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css'
 ];
 
-// Instalación del Service Worker
+// Instalación
 self.addEventListener('install', (event) => {
   console.log('✓ Service Worker instalándose...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('✓ Cache abierto');
       return cache.addAll(urlsToCache).catch((err) => {
-        console.warn('⚠️ Algunos recursos no se pudieron cachear:', err);
-        // Continuar incluso si algunos no se cachean
+        console.warn('⚠️ Algunos recursos no se cachearon:', err);
       });
-    })
+    }).then(() => self.skipWaiting())
   );
-  // Activar inmediatamente (skip waiting)
-  self.skipWaiting();
 });
 
-// Activación del Service Worker
+// Activación y limpieza de cachés antiguos
 self.addEventListener('activate', (event) => {
   console.log('✓ Service Worker activándose...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('✓ Limpiando caché antiguo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => {
+            console.log('✓ Eliminando caché antiguo:', name);
+            return caches.delete(name);
+          })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  // Tomar control de todas las páginas inmediatamente
-  return self.clients.claim();
 });
 
-// Estrategia Fetch: Cache First para estáticos, Network First para dinámicos
+// Estrategia de fetch híbrida
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  
+  if (request.method !== 'GET') return;
+  
   const url = new URL(request.url);
-
-  // No cachear peticiones no-GET
-  if (request.method !== 'GET') {
-    return;
-  }
-
-  // Cache First para recursos estáticos
-  if (url.pathname.includes('/src/') || 
+  
+  // Cache First para recursos estáticos locales
+  if (url.pathname.startsWith(BASE_PATH + 'src/') || 
       url.pathname.endsWith('.css') || 
       url.pathname.endsWith('.js') ||
-      url.pathname.endsWith('manifest.json')) {
+      url.pathname.endsWith('manifest.json') ||
+      url.hostname === location.hostname) {
+    
     event.respondWith(
-      caches.match(request).then((response) => {
-        return response || fetch(request).then((response) => {
-          if (response.status === 200) {
-            const responseToCache = response.clone();
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        
+        return fetch(request).then((response) => {
+          if (response.ok && response.status === 200) {
+            const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
+              cache.put(request, clone);
             });
           }
           return response;
+        }).catch(() => {
+          // Fallback para HTML principal
+          if (request.destination === 'document') {
+            return caches.match(BASE_PATH + 'index.html');
+          }
+          return new Response('Recurso no disponible offline', { 
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' }
+          });
         });
-      }).catch(() => {
-        // Si no hay conexión, devolver fallback
-        return caches.match(request) || 
-               new Response('No disponible offline', { status: 503 });
       })
     );
   } 
-  // Network First para contenido dinámico (Firebase)
-  else {
+  // Network First para APIs dinámicas (Firebase)
+  else if (url.hostname.includes('firebase') || url.hostname.includes('gstatic')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cachear respuestas exitosas
-          if (response.status === 200) {
-            const responseToCache = response.clone();
+          if (response.ok) {
+            const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
+              cache.put(request, clone);
             });
           }
           return response;
         })
         .catch(() => {
-          // Si falla, intentar obtener del caché
-          return caches.match(request) || 
-                 new Response('No disponible offline', { status: 503 });
+          return caches.match(request);
         })
     );
   }
-});
-
-// Manejo de notificaciones push (opcional)
-self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data ? event.data.text() : 'Nueva notificación',
-    icon: '/sistema-hidroponico/data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22><rect fill=%22%23dc2626%22 width=%22192%22 height=%22192%22 rx=%2240%22/><text x=%2296%22 y=%2296%22 font-size=%22100%22 fill=%22white%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-weight=%22bold%22>H</text></svg>',
-    badge: '/sistema-hidroponico/data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 96 96%22><rect fill=%22%23dc2626%22 width=%2296%22 height=%2296%22/></svg>'
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification('Sistema Hidropónico', options)
-  );
-});
-
-// Sincronización en background (cuando vuelve la conexión)
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-data') {
-    event.waitUntil(
-      new Promise((resolve) => {
-        console.log('✓ Sincronizando datos...');
-        // Aquí iría la lógica de sincronización
-        resolve();
+  // CDN resources - Stale-while-revalidate
+  else if (url.hostname.includes('cdn.jsdelivr') || 
+           url.hostname.includes('cdnjs') ||
+           url.hostname.includes('fonts.googleapis')) {
+    event.respondWith(
+      caches.open(CACHE_NAME + '-cdn').then((cache) => {
+        return cache.match(request).then((cached) => {
+          const fetchPromise = fetch(request).then((response) => {
+            if (response.ok) {
+              cache.put(request, response.clone());
+            }
+            return response;
+          }).catch(() => cached);
+          
+          return cached || fetchPromise;
+        });
       })
     );
   }
 });
 
-console.log('✓ Service Worker definido correctamente');
+// Notificaciones push (opcional)
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() || { title: 'Hidro', body: 'Actualización disponible' };
+  
+  const options = {
+    body: data.body,
+    icon: BASE_PATH + 'icons/icon-192.png',
+    badge: BASE_PATH + 'icons/badge-72.png',
+    tag: 'hidro-notification',
+    requireInteraction: false
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Sincronización en background
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-hidro-data') {
+    event.waitUntil(
+      // Aquí puedes agregar lógica para reintentar envíos pendientes
+      console.log('✓ Sincronización de datos iniciada')
+    );
+  }
+});
+
+console.log('✓ Service Worker listo para:', BASE_PATH);
 
