@@ -126,3 +126,4 @@ self.addEventListener('sync', (event) => {
 });
 
 console.log('✓ Service Worker definido correctamente');
+
